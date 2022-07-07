@@ -142,7 +142,9 @@ enum ItemType {
 
 需要注意的是 ERC721_WITH_CRITERIA 和 ERC1155_WITH_CRITERIA。表示基于标准的 ERC721/ERC1155。
 
-配合 identifierOrCriteria 可以用来表示一个标准，代表一个或者多个 NFT的集合。具体后面再来说明。
+配合 identifierOrCriteria 可以用来表示一个标准，代表一个或者多个 NFT的集合。
+
+还有一点需要注意的是在 `OrderFulfilled` 事件中 `ERC721_WITH_CRITERIA` 和 `ERC1155_WITH_CRITERIA` 类型的元素会被转换为对应的 `ERC721` 和 `ERC1155` 类型。
 
 #### 2) token
 
@@ -158,7 +160,7 @@ token 的合约地址，空地址表示原生代币。
 
 简单来说就是卖家拥有一个 collection 的多个 NFT。这时候他就可以提供一个 offer，这个 offer 里的 identifierOrCriteria 是通过他所拥有的 NFT 对应的 token id 组成的集合生成的。这样这个 offer 就包含了他拥有的所有 NFT 对应的 token id 的信息。买家在交易的时候可以选择某一个 token id 的 NFT 进行交易，如果验证通过就能进行成交。具体实现过程后面再详细说明。
 
-identifierOrCriteria 可以为 0，表示买家提供该 collection 下所有 NFT 的 offer。买家在成交的时候可以选择任意一个。
+identifierOrCriteria 可以为 0，表示买家提供该 collection 下所有 NFT 的 offer。买家在成交的时候可以选择该 collection 下 offerer 拥有的任意 NFT。
 
 需要注意的是，这个特性在 Opensea 目前的前端界面中还不支持。
 
@@ -191,7 +193,7 @@ order 里的 offer 的提供者。
 
 需要注意的是，订单要是想要成交或者说想要转移 offerer 提供的 offer，必须是下面三个情况中的一个。
 
-1. msg.sender == offerer，也就是卖家自己操作
+1. msg.sender == offerer，也就是 offerer 自己操作
 2. 通过签名进行授权，标准的 65-byte EDCSA, 64-byte EIP-2098, 或者通过 EIP-1271 isValidSignature 的校验。大部分情况下是这种。
 3. offerer 通过调用 validate() 进行链上挂单的。这种情况下订单成交的时候可以跳过签名的校验。
 
@@ -218,7 +220,7 @@ function validate(Order[] calldata orders)
 
 #### 1) FULL 和 PARTIAL
 
-`FULL` 表示订单不支持部分填充，而 `PARTIAL` 允许填充订单的某些部分，但需要注意的是，每个项目必须可以被提供的部分完全整除（即除后没有余数）。部分填充一般用于 ERC1155 的 NFT。买方可以购买 offer 中的一部分。
+`FULL` 表示订单不支持部分填充，而 `PARTIAL` 允许填充订单的某些部分。部分填充一般用于 ERC1155 的 NFT。买方可以购买 offer 中的一部分。
 
 #### 2) OPEN 和 RESTRICTED
 
@@ -248,7 +250,7 @@ zone 是可选的辅助帐户，一般情况下是一个合约。
 
 具有两个附加权限：
 
-1. zone 可以通过调用 `cancel` 来取消其命名为区域的订单。（请注意，offerer 也可以取消自己的订单，可以单独取消，也可以通过调用 `incrementCounter` 立即取消与当前计数器签署的所有订单）。
+1. zone 可以通过调用 `cancel` 来取消其命名为 zone 的订单。（请注意，offerer 也可以取消自己的订单，可以单独取消，也可以通过调用 `incrementCounter` 立即取消与当前计数器签署的所有订单）。
 2. `RESTRICTED` 类型的订单必须由 zone 或 offerer 执行，或者调用 zone 的 `isValidOrder`或 `isValidOrderIncludingExtraData` 方法来查看返回的 magic value。这个 magic value 表示订单是否已被批准。
 
 简单来说 zone 是在成单前做额外校验的，并且可以取消 offerer 的 listing。offerer 可以利用 zone 来做一些交易过滤相关的操作。
@@ -266,6 +268,8 @@ conduitKey 跟 conduit 是密切关联的。项目方，拥有者或者平台可
 ### 8. counter
 
 计数器，要与 offerer 的计数器相同。
+
+offerer 可以通过调用 `incrementCounter` 立即取消与当前计数器签署的所有订单。
 
 ## Order Fulfillment
 
@@ -315,27 +319,160 @@ Advanced 分两个维度
 
 总结下来 Advanced 主要体现在下面几点：
 
-#### 1. 部分填充(Partial fills)
+#### 1. 部分填充（Partial fills）
 
 上面我们了解到 orderType 中有 FULL 和 PARTIAL 的分别。 FULL 表示完全填充，也就是买方必须购买全部的 offer。 PARTIAL 则表示允许买方购买部分的 offer。
 
 因此在使用部分填充的时候 orderType 必须是 1 或者 3。
 
-AdvancedOrder 相较于 Order 多了 numerator（分子）和 denominator（分母）两个参数。通过他们计算出来一个比率，这个比率就是买方希望获取数量占 offer 总数量的百分比。分子、分母都是 1 则表示要全部购买。（其实在 Advanced 的方法中 Order 都会被转化为 AdvancedOrder，分子、分母都是 1）
+AdvancedOrder 相较于 Order 多了 numerator（分子）和 denominator（分母）两个参数。通过他们计算出来一个比率，这个比率就是买方希望获取数量占 offer 总数量的比率。分子、分母都是 1 则表示要全部购买。（其实在 Advanced 的方法中 Order 都会被转化为 AdvancedOrder，分子、分母都是 1）
 
-一个 offer 支持多次填充。也就是说如果一次交易没有完全卖出，订单还是有效的。后续还可以进行购买。
+一个 PARTIAL 类型的 offer 支持多次部分填充。也就是说如果一次交易没有完全卖出，订单还是有效的。后续还可以进行购买。
 
-#### 1. criteriaResolvers
+有几点需要注意：
 
-#### 2. 
+1. 部分填充的比率是原订单 offer 数量为基准的。
+   1. 比如说 offer 中有 10 个。
+   2. 第一次成交 3/10，还剩余 7 个。
+   3. 第二次成交 1/2 ，买方获得的数量是 `1 / 2 * 10 = 5`。
+2. 如果总数量是 amount，那么 `amount * (numerator / denominator)` 必须是个整数，否则会报 `InexactFraction` 的错误。
+3. 如果买方想要获取的比率乘以总数量大于剩余数量的话将会获取剩余的全部。
+4. 如果 numerator > denominator 或者 numerator == 0，会报 `BadFraction` 的错误。
 
-#### 1. 可以指定 recipient
+#### 2. 基于标准的订单（Criteria-based orders）
 
-fulfillOrder 和 fulfillAvailableOrders 方法只能指定 `msg.sender` 作为 recipient。Advanced Order 可以指定任意的 recipient。
+前面介绍 `identifierOrCriteria` 的时候，我们大致了解了基于标准的订单的基本逻辑。现在看看是怎么实现的。
 
-#### 2. 
+这里面涉及到一个我们都很熟悉的数据结构： Merkle Tree。
+
+![merkle](Seaport.merkle.drawio.svg)
+
+我们通过一个例子来具体说明实现过程。
+
+1. 首先一个 offerer 拥有某个 collection 的三个 ERC721 token。tokend id 分别是 1、2、6。
+
+2. offerer 挂出他的 token。挂单的时候要生成一个 Merkle Tree。Data1 = 1， Data1 = 2， Data1 = 6。最终得到 Root 的值。然后生成订单信息，offer 的 `identifierOrCriteria` = `Root`。
+3. 某个买家想要购买 tokend id 为 1 的 token。需要调用 Advanced 方法。
+4. Advanced 方法需要传入 criteriaResolvers 参数。具体类型如下
 
 ```solidity
+// ConsiderationStructs.sol => CriteriaResolver
+
+struct CriteriaResolver {
+    uint256 orderIndex; // 用于一次成交多个订单的情况，表明需要校验哪个订单
+    Side side;  // offer 或者 consideration，具体订单中的哪一方
+    uint256 index; // offer 或者 consideration 中的元素索引，找出具体哪个元素
+    uint256 identifier; // 想要成交的 tokend id， 上面例子中就是 1
+    bytes32[] criteriaProof; // 证明所需的数据，比如上面的例子中就是 Node12 和 Node22 组成的集合。
+}
+```
+
+5. 执行订单的时候要先进行证明，证明买家要买的 token 包含在 offerer 的 offer 之中。
+
+```solidity
+// CriteriaResolution.sol => _verifyProof()
+
+/**
+     * @dev Internal pure function to ensure that a given element is contained
+     *      in a merkle root via a supplied proof.
+     *
+     * @param leaf  The element for which to prove inclusion. 上面的例子中就是 1
+     * @param root  The merkle root that inclusion will be proved against. offer 中的 identifierOrCriteria 
+     * @param proof The merkle proof. 买方成单的时候传入的 criteriaProof
+     */
+    function _verifyProof(
+        uint256 leaf,
+        uint256 root,
+        bytes32[] memory proof
+    ) 
+    // 省略具体代码
+    // 大致证明逻辑如下
+    // 1. 根据 leaf 生成 Node11
+    // 2. 根据 Node11 和传入的 Node12 生成 Node21
+    // 3. 根据 Node21 和传入的 Node22 生成 Root
+    // 4. 如果 Root == root 就说明通过了证明
+```
+
+6. 将 offerer 对应 token id 的 token 转移给买家，完成交易。
+
+还有一点需要注意的是 如果 offerer 的 offer 中 identifierOrCriteria 是 0 的话，表示买家可以购买 offerer 的任意 token id 的 token。
+
+#### 3. 受限订单和额外数据（restricted order and extra data）
+
+受限订单是所有方法都有的，额外数据是 Advanced 特有的。我们看看具体实现。
+
+```solidity
+// ZoneInteraction.sol => _assertRestrictedAdvancedOrderValidity()
+
+    function _assertRestrictedAdvancedOrderValidity(
+        AdvancedOrder memory advancedOrder,
+        CriteriaResolver[] memory criteriaResolvers,
+        bytes32[] memory priorOrderHashes,
+        bytes32 orderHash,
+        bytes32 zoneHash,
+        OrderType orderType,
+        address offerer,
+        address zone
+    ) internal view {
+        // Order type 2-3 require zone or offerer be caller or zone to approve.
+        // 如果是受限订单且不是由 offerer 或者 zone 执行的时候需要进行校验
+        if (
+            uint256(orderType) > 1 &&
+            msg.sender != zone &&
+            msg.sender != offerer
+        ) {
+            // If no extraData or criteria resolvers are supplied...
+            // 如果不是基于标准处理的订单且 extraData 为空
+            if (
+                advancedOrder.extraData.length == 0 &&
+                criteriaResolvers.length == 0
+            ) {
+                // Perform minimal staticcall to the zone.
+                // 调用 zone 的 isValidOrder 方法，进行校验
+                _callIsValidOrder(zone, orderHash, offerer, zoneHash);
+            } else {
+                // Otherwise, extra data or criteria resolvers were supplied; in
+                // that event, perform a more verbose staticcall to the zone.
+                // 其他情况下：基于标准处理的订单或者 extra data 存在。调用 zone 的 isValidOrderIncludingExtraData 方法
+                bool success = _staticcall(
+                    zone,
+                    abi.encodeWithSelector(
+                        ZoneInterface.isValidOrderIncludingExtraData.selector,
+                        orderHash,
+                        msg.sender,
+                        advancedOrder,
+                        priorOrderHashes,
+                        criteriaResolvers
+                    )
+                );
+
+                // Ensure call was successful and returned correct magic value.
+                // 确保调用成功且返回的 magic value 是正确的。否则报错。
+                _assertIsValidOrderStaticcallSuccess(success, orderHash);
+            }
+        }
+    }
+```
+
+#### 4. 可以指定 recipient
+
+fulfillOrder 和 fulfillAvailableOrders 方法只能指定 `msg.sender` 作为 recipient。fulfillAdvancedOrder 和 fulfillAvailableAdvancedOrders 可以指定任意的 recipient。
+
+### Conduit
+
+Conduit 是一个合约，发售者通过他来设置代币授权。Conduit 的所有者可以为 Conduit 添加和删除 "channel"，而注册的 channel 可以指示 Conduit 如何转移代币。这两个概念以完全 "选择 "的方式实现了可扩展性和可升级性，给创造者、收集者和平台提供了额外的能力，使他们能够利用 Seaport 做出自己的选择，同时保持与协议上其他挂单的广泛兼容性。
+
+上面 order 中的 conduitKey 就与此相关。我们看看具体是怎么实现的。
+
+
+
+### fulfillBasicOrder
+
+```solidity
+// 说明：为了更容易查看，我将方法的 ABI 中的 tuple 标识符删除了，换成这个 tuple 对应的参数名称。
+// 比如正常情况下 parameters 的位置应该是 tuple ，parameters 在最后面。
+// 下同。
+
 function fulfillBasicOrder(
     parameters(
         address considerationToken, 
@@ -366,6 +503,138 @@ function fulfillBasicOrder(
     
     returns (bool fulfilled)
 ```
+
+#### 通过 fulfillBasicOrder 执行的订单要满足的条件
+
+1. 该订单只包含一个 offer 项目，并且至少包含一个 consideration 项目。
+2. 该订单只包含一个 ERC721 或 ERC1155 项目，并且该项目不是基于标准的（Criteria-based）。
+3. 该订单的 offerer 会收到 consideration 中第一个项目。
+4. 用作货币（currency）的 token 必须是同一种。也就是说要么是原生代币作为支付货币 要么是 ERC20 的 token 作为支付货币，不能混合支付。
+5. offer 不能是原生代币。
+6. 每个项目的 startAmount 必须与该项目的 endAmount 一致（即项目不能有升/降金额）。
+7. 所有 "被忽略 "的项目字段（即本地项目的token和identifierOrCriteria以及ERC20项目的identifierOrCriteria）被设置为空地址或零。
+8. 原生货币项目上的token需要设置为空地址，货币上的标识符需要为 0，ERC721项目上的数量要为 1。
+9. 如果订单有多个对价项目，并且除第一个对价项目外的所有对价项目与被提供的项目类型相同，则被提供的项目金额不低于除第一个对价项目金额外的所有对价项目金额之和。
+
+#### BasicOrderRouteType and BasicOrderType
+
+```solidity
+// ConsiderationEnums.sol => BasicOrderRouteType
+
+enum BasicOrderRouteType {
+    // 0: provide Ether (or other native token) to receive offered ERC721 item.
+    ETH_TO_ERC721,
+
+    // 1: provide Ether (or other native token) to receive offered ERC1155 item.
+    ETH_TO_ERC1155,
+
+    // 2: provide ERC20 item to receive offered ERC721 item.
+    ERC20_TO_ERC721,
+
+    // 3: provide ERC20 item to receive offered ERC1155 item.
+    ERC20_TO_ERC1155,
+
+    // 4: provide ERC721 item to receive offered ERC20 item.
+    ERC721_TO_ERC20,
+
+    // 5: provide ERC1155 item to receive offered ERC20 item.
+    ERC1155_TO_ERC20
+}
+```
+
+这里有个 `BasicOrderRouteType` 的概念。也就是交换路径。表示支付什么类型的代币获取什么类型的代币。
+
+注意：上面说过 offer 不能是原生代币，因此没有 `ERC721_TO_ETH` 或者 `ERC1155_TO_ETH` 的类型。
+
+还有一点 BasicOrder 的订单的类型不是最上面我们讲到的 `OrderType`。 他有自己的 `BasicOrderType`。
+
+`basicOrderType = orderType + (4 * basicOrderRoute)`
+
+与 `OrderType` 类似。
+
+```solidity
+// ConsiderationEnums.sol => BasicOrderType
+
+enum BasicOrderType {
+    // 0: no partial fills, anyone can execute
+    ETH_TO_ERC721_FULL_OPEN,
+
+    // 1: partial fills supported, anyone can execute
+    ETH_TO_ERC721_PARTIAL_OPEN,
+
+    // 2: no partial fills, only offerer or zone can execute
+    ETH_TO_ERC721_FULL_RESTRICTED,
+
+    // 3: partial fills supported, only offerer or zone can execute
+    ETH_TO_ERC721_PARTIAL_RESTRICTED,
+
+    // 4: no partial fills, anyone can execute
+    ETH_TO_ERC1155_FULL_OPEN,
+
+    // 5: partial fills supported, anyone can execute
+    ETH_TO_ERC1155_PARTIAL_OPEN,
+
+    // 6: no partial fills, only offerer or zone can execute
+    ETH_TO_ERC1155_FULL_RESTRICTED,
+
+    // 7: partial fills supported, only offerer or zone can execute
+    ETH_TO_ERC1155_PARTIAL_RESTRICTED,
+
+    // 8: no partial fills, anyone can execute
+    ERC20_TO_ERC721_FULL_OPEN,
+
+    // 9: partial fills supported, anyone can execute
+    ERC20_TO_ERC721_PARTIAL_OPEN,
+
+    // 10: no partial fills, only offerer or zone can execute
+    ERC20_TO_ERC721_FULL_RESTRICTED,
+
+    // 11: partial fills supported, only offerer or zone can execute
+    ERC20_TO_ERC721_PARTIAL_RESTRICTED,
+
+    // 12: no partial fills, anyone can execute
+    ERC20_TO_ERC1155_FULL_OPEN,
+
+    // 13: partial fills supported, anyone can execute
+    ERC20_TO_ERC1155_PARTIAL_OPEN,
+
+    // 14: no partial fills, only offerer or zone can execute
+    ERC20_TO_ERC1155_FULL_RESTRICTED,
+
+    // 15: partial fills supported, only offerer or zone can execute
+    ERC20_TO_ERC1155_PARTIAL_RESTRICTED,
+
+    // 16: no partial fills, anyone can execute
+    ERC721_TO_ERC20_FULL_OPEN,
+
+    // 17: partial fills supported, anyone can execute
+    ERC721_TO_ERC20_PARTIAL_OPEN,
+
+    // 18: no partial fills, only offerer or zone can execute
+    ERC721_TO_ERC20_FULL_RESTRICTED,
+
+    // 19: partial fills supported, only offerer or zone can execute
+    ERC721_TO_ERC20_PARTIAL_RESTRICTED,
+
+    // 20: no partial fills, anyone can execute
+    ERC1155_TO_ERC20_FULL_OPEN,
+
+    // 21: partial fills supported, anyone can execute
+    ERC1155_TO_ERC20_PARTIAL_OPEN,
+
+    // 22: no partial fills, only offerer or zone can execute
+    ERC1155_TO_ERC20_FULL_RESTRICTED,
+
+    // 23: partial fills supported, only offerer or zone can execute
+    ERC1155_TO_ERC20_PARTIAL_RESTRICTED
+}
+```
+
+fulfillBasicOrder 方法更像是为了兼容 Wyvern Protocol。
+
+### fulfillOrder
+
+在测试用例中 fulfillOrder 和 fulfillAdvancedOrder 被称作标准方法（Stand）。也是使用最多的方法。
 
 ```solidity
 function fulfillOrder(
@@ -405,6 +674,11 @@ function fulfillOrder(
     
     returns (bool fulfilled)
 ```
+
+从上面的 ABI 上，我们可以看出大部分的内容前面都做过解析。只有两个我们现在还不了解。一个是 `conduitKey，` 一个是 `fulfillerConduitKey。` BasicOrder 里面也有类似的 `offererConduitKey` 和 `fulfillerConduitKey。` 他们的作用都是一样的。
+
+
+### fulfillAdvancedOrder
 
 ```solidity
 function fulfillAdvancedOrder(
@@ -455,6 +729,8 @@ payable
 
 returns(bool fulfilled)
 ```
+
+### fulfillAvailableOrders
 
 ```solidity
 
@@ -517,6 +793,8 @@ function fulfillAvailableOrders(
             )[] 
         )
 ```
+
+### fulfillAvailableAdvancedOrders
 
 ```solidity
 function fulfillAvailableAdvancedOrders(
@@ -589,4 +867,5 @@ returns(
     )
 )
 ```
+
 <!-- ![Seaport](Seaport.drawio.svg) -->
