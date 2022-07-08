@@ -1,57 +1,120 @@
-<svg host="65bd71144e" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" version="1.1" width="731px" height="396px" viewBox="-0.5 -0.5 731 396" content="&lt;mxfile&gt;&lt;diagram id=&quot;AQBLfSeY2jg5v9h2hukx&quot; name=&quot;Page-1&quot;&gt;7VjJbtswEP0aAcmhgRZLkY+xk7RFUSRADm1PBS0xMhFKVCkqtvP1HYrUQi22ARstAkQXmY/kkDN8j6Ox5S3T7WeO8vV3FmNquXa8tbxby3Wd6yCEl0R2Cvmk2wknsR7TAk/kDWvQ1mhJYlwYAwVjVJDcBCOWZTgSBoY4Zxtz2DOj5qo5SvAAeIoQHaI/SCzWCg19u8W/YJKs65UdW/esUPSScFZmej3L9Z6rR3WnqLalxxdrFLNNB/LuLG/JGRPqV7pdYipDW4dNzbuf6G32zXEmjpngqQmviJba9SXL4pIIeAnOKMVcb1Ts6uAUG5JSlEFroWdjLvB2cgdO4xfQBbMUC76DIXrCtY6EJooThBrYtIH3XF9h627QQw0ifdhJY7t1GH5on8f9nw38t9yAwgqLZwiA4Xfwp2R1x6eiouwNDHBm+bbtrDhJGTdmAAlsez6XHGmhINHvarVVDfyOVPyLpof3x4JPqxFMbdiEj3bCM53QVu7urcXSCsMU5TnJkgsUxxwXsDVbGUNpDsPGHZGDzF2MBkY+Uh39tTUNHznLgV0EFwc87Qblst74fHJSj9JAX4mvRQpEuXXgJ6IkyeB3BDQGDXgLSXICN8SN7khJHMvpC4gIeUOryhTEZZEzkomKkv7C8m+lrVIwFevKdAHCesFLHY2MVUp6JpT2oKPE5e0Vl+te+Ya8vKG43FpwXXHN7NO15R/S1oRS5GMo6jB93TH6RhwjgTWRLlY7gQtPJw2JfMPgzbJD01ZpLc9JRgRB9GGTYX45LckWSbDYt+JRNt41a+WOdUJ3Zrq9bA66vgjPwu6gz+7QHbLbHmF3k65PoXcwlTq7d9Z06uzFRT739+dJqbPZIKcGw5wajAXGOUNgrid1H5PXDsdV9shWhXy1YnkBXRoaMGcdMtRql0nRnmJKxqGxljMB4a/vgjOZVVqDC2KN4EOWFieaPSpP2yUo3fWDy3bdr1mMt7h4pGXxoFPP+CbewwV0lICC/WnT1E/9lWh8kY6oJzyDeMIR8fSijrP4RtY4MswUFQWJzDM4eANXCdZb4C0RP+WgK/j+0+1f8jSurn3dvN3q06kau07jEXMCzskzVhiUC7uf3YYy5dfN1lTVqm0p73A8qMd6lx1EgJU8wsZnu0Ac8u3eE+2cmT9yZDXGMUWCvJqbGDtHvcKjZGtLGL9fxTRAbUPtXk/rFmQ9S4Hbt+T2LCmnB5YqYjWOH8W1+VQG25e3zpCf+sEK5/+y5KtT3EfN91Hzvc/kNd+fvP5nzec4h8T1UfR9FH2n0PufFn3QbP+LVRm2/b/bu/sL&lt;/diagram&gt;&lt;/mxfile&gt;" style="background-color: rgb(255, 255, 255);">
+<svg host="65bd71144e" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" version="1.1" width="588px" height="601px" viewBox="-0.5 -0.5 588 601" content="&lt;mxfile&gt;&lt;diagram id=&quot;AQBLfSeY2jg5v9h2hukx&quot; name=&quot;Page-1&quot;&gt;3Vpbb6M6EP41SO1DK4gDCY/NpdvqaNtq29We8xQ54ASrDuYY0ybn1x8bzB1yabJk26hqYMBz8zDzzRANjFfrbwwG3nfqIqL1dHetgYnW61lgIP5LwiYhXPWBlVCWDLsJzcgJz/g/pIi6okbYRWHpRk4p4TgoEx3q+8jhJRpkjL6Xb1tQUpYawCWqEZ4dSOrUX9jlXkIdmnpOv0N46aWSDV1dmUPndclo5Ct5Wg8s4k9yeQVTXur+0IMufS+QwFQDY0YpT45W6zEi0rep25J1ty1XM70Z8vk+C0Cy4A2SSJk+pr4bYS6+OKOEIKYU5ZvUOeE7XhHoi7ORWo0YR+tWDYzMLhEviK4QZxtxi1qQ7bmKFcNMvfyee743VDSv4HUwUESodnuZMc8tFgfK6GYHmDUHaD2LCAmjhfBAyXDr34imF67COGZvxA0GCNb5RXG0VN8xFxe/NTJxKKEsYcCW8wthifgT2uqFo8s629n48WHy8/5lNv4xvXm5f3wQhMl0dnfzfJdKFBbHQrvR48fPh5f779MzqZGynbMqZYv4ytIqQe270mhSFAocR9elSlU9HIYgR+rRubgsKJFwq+lWk9qJu6LAlWp6UGRNUlLz98vmDPrhArHHdx+x0MNBx/Id6DuIZNJflDodawEdBwX8XD6gUu7jomOpS8T/QpvuhTY9jp0IfqJcFD8Mk2g7g+HJA/7MIY/C7sW/UA6J0uEM4s+T3nLB5zA5xWwuuoOhh3aqUCtMFYgn4Jyke3wlcNPEkImL4KUvjh0R2QITgpEEfVgg5ht1YYVdVy4fMSSwEZzHrHRxHlDs8xihmSPNnEheEacJfopZhwJovorimdRbn8bIcoEJqZKExqpVMPrqfJxVaaDrtq3rmTU7QCnYDkrLmDRFn0VE2m9ApD37BIi0fzwi7W9DpBn0mDlJ2IRNuORiB4ZpooUB9D+OmFcwCLC/LApOGO6CetsAm65bVhmw7aGeuZf7oOuKUG903g7fHecnmQziRXAVyMe/IrDRZ8dJ28PP8iOb3OpylZmeGA1kvkBh+zYeAJaPc+ClNr3VRmNtaB8canto/Rky6QkyJADXZilHArueI42GHGmdIEVabVOLYpy1Ty0qhUN+bm/3dcv2aYZplStH4zTDGDT4xTBO4JhBa+1oAx0HDTOOHokkKcufh/LrFW12P/sH4KczmhI3Vl/FGBnwpQ7mCxlWJTkKs38hE5VJ976L1ih8IlH4KLLeYfZ9mSJmbc/WpVydIu9iprYaMvXwBIl62JCoK05HvnsjX2XkFhf8v7MXiueUYCQcwTZ/S9dfCyicEv6JCWZOmKzV7iRnG3UWcsh4qoRDYBhiJyXfYpIqIzRVZxmLJ8SwcIoMjUnekyG39tplZ2Et7IbZsBkpjSECOX4rs2/aISXhSYZhHgl9sxwLhmX0yzxCGjEHqWXFNyoVTgIBXNtWjdl1f1jmJ3wYj4oq/OLAyczfK5bsNjR0AAZSfVI5sEC614rQA6cBSSL8K+DRsJte+jS22PoJnj7D2NVjtzSTzdP/Uj34YHZvbNllh569heu6QM3S2niRduZZx9vUgOpzSsnlB0dfB1XMg172fFSYqJ1OxNFHZ3mHyBhB7niG6BS6EPYLc68bgSd52fTnBcaM7/nm6FNOBk46Y7W3VoErvTpBqOOvxhJgnGKEYPxmBJYNFeIfgyD3aEQlQdyVRHGgjOJ0kBFaUNynBGTZzh8NyHq9wfVgYOefQQV6CMBm7YXNxL7BTeE29dS12mCYLTa0qVpbYFtGJagTHfaEiuI0/ylRcnv+ey0w/R8=&lt;/diagram&gt;&lt;/mxfile&gt;" style="background-color: rgb(255, 255, 255);">
     <defs/>
     <g>
-        <path d="M 0 23 L 0 0 L 325 0 L 325 23" fill="rgb(255, 255, 255)" stroke="rgb(0, 0, 0)" stroke-miterlimit="10" pointer-events="all"/>
-        <path d="M 0 23 L 0 185 L 325 185 L 325 23" fill="none" stroke="rgb(0, 0, 0)" stroke-miterlimit="10" pointer-events="none"/>
-        <path d="M 0 23 L 325 23" fill="none" stroke="rgb(0, 0, 0)" stroke-miterlimit="10" pointer-events="none"/>
+        <path d="M 67 23 L 67 0 L 347 0 L 347 23" fill="rgb(255, 255, 255)" stroke="rgb(0, 0, 0)" stroke-miterlimit="10" pointer-events="all"/>
+        <path d="M 67 23 L 67 370 L 347 370 L 347 23" fill="none" stroke="rgb(0, 0, 0)" stroke-miterlimit="10" pointer-events="none"/>
+        <path d="M 67 23 L 347 23" fill="none" stroke="rgb(0, 0, 0)" stroke-miterlimit="10" pointer-events="none"/>
         <g fill="rgb(0, 0, 0)" font-family="Helvetica" font-weight="bold" pointer-events="none" text-anchor="middle" font-size="12px">
-            <text x="162" y="16">
+            <text x="206.5" y="16">
                 ConduitController
             </text>
         </g>
         <g transform="translate(-0.5 -0.5)">
             <switch>
                 <foreignObject pointer-events="none" width="100%" height="100%" requiredFeatures="http://www.w3.org/TR/SVG11/feature#Extensibility" style="overflow: visible; text-align: left;">
-                    <div xmlns="http://www.w3.org/1999/xhtml" style="display: flex; align-items: unsafe center; justify-content: unsafe center; width: 1px; height: 1px; padding-top: 50px; margin-left: 163px;">
-                        <div data-drawio-colors="color: rgb(0, 0, 0); " style="box-sizing: border-box; font-size: 0px; text-align: center;">
-                            <div style="display: inline-block; font-size: 12px; font-family: Helvetica; color: rgb(0, 0, 0); line-height: 1.2; pointer-events: none; white-space: nowrap;">
-                                <font style="font-size: 14px" color="#009900">
-                                    <b>
-                                        _conduits
-                                        <br/>
-                                    </b>
-                                </font>
+                    <div xmlns="http://www.w3.org/1999/xhtml" style="display: flex; align-items: unsafe center; justify-content: unsafe center; width: 1px; height: 1px; padding-top: 225px; margin-left: 207px;">
+                        <div data-drawio-colors="color: #009900; " style="box-sizing: border-box; font-size: 0px; text-align: center;">
+                            <div style="display: inline-block; font-size: 14px; font-family: Helvetica; color: rgb(0, 153, 0); line-height: 1.2; pointer-events: none; white-space: nowrap;">
                                 <font style="font-size: 13px">
-                                    （mapping(address =&gt;
-                                    <b>
-                                        <font color="#3333ff">
-                                            ConduitProperties
-                                        </font>
-                                    </b>
-                                    )）
+                                    <div style="color: rgb(0 , 0 , 0)">
+                                        _CONDUIT_CREATION_CODE_HASH
+                                    </div>
+                                    <div style="color: rgb(0 , 0 , 0)">
+                                        _CONDUIT_RUNTIME_CODE_HASH
+                                    </div>
+                                    <div style="color: rgb(0 , 0 , 0)">
+                                        <br/>
+                                    </div>
+                                    <div>
+                                        <b>
+                                            <font color="#cc0000">
+                                                createConduit()
+                                            </font>
+                                        </b>
+                                    </div>
+                                    <div style="color: rgb(0 , 0 , 0)">
+                                        updateChannel()
+                                    </div>
+                                    <div style="color: rgb(0 , 0 , 0)">
+                                        transferOwnership()
+                                    </div>
+                                    <div style="color: rgb(0 , 0 , 0)">
+                                        cancelOwnershipTransfer()
+                                    </div>
+                                    <div style="color: rgb(0 , 0 , 0)">
+                                        acceptOwnership()
+                                    </div>
+                                    <div style="color: rgb(0 , 0 , 0)">
+                                        ownerOf()
+                                    </div>
+                                    <div style="color: rgb(0 , 0 , 0)">
+                                        getKey()
+                                    </div>
+                                    <div style="color: rgb(0 , 0 , 0)">
+                                        getConduit()
+                                    </div>
+                                    <div style="color: rgb(0 , 0 , 0)">
+                                        getPotentialOwner()
+                                    </div>
+                                    <div style="color: rgb(0 , 0 , 0)">
+                                        getChannelStatus()
+                                    </div>
+                                    <div style="color: rgb(0 , 0 , 0)">
+                                        getTotalChannels()
+                                    </div>
+                                    <div style="color: rgb(0 , 0 , 0)">
+                                        getChannel()
+                                    </div>
+                                    <div style="color: rgb(0 , 0 , 0)">
+                                        getChannels()
+                                    </div>
+                                    <div style="color: rgb(0 , 0 , 0)">
+                                        getConduitCodeHashes()
+                                    </div>
                                 </font>
                             </div>
                         </div>
                     </div>
                 </foreignObject>
-                <text x="163" y="54" fill="rgb(0, 0, 0)" font-family="Helvetica" font-size="12px" text-anchor="middle">
-                    _conduits...
+                <text x="207" y="229" fill="#009900" font-family="Helvetica" font-size="14px" text-anchor="middle">
+                    _CONDUIT_CREATION_CODE_HASH...
                 </text>
             </switch>
         </g>
         <g transform="translate(-0.5 -0.5)">
             <switch>
                 <foreignObject pointer-events="none" width="100%" height="100%" requiredFeatures="http://www.w3.org/TR/SVG11/feature#Extensibility" style="overflow: visible; text-align: left;">
-                    <div xmlns="http://www.w3.org/1999/xhtml" style="display: flex; align-items: unsafe center; justify-content: unsafe center; width: 1px; height: 1px; padding-top: 132px; margin-left: 163px;">
-                        <div data-drawio-colors="color: #009900; " style="box-sizing: border-box; font-size: 0px; text-align: center;">
-                            <div style="display: inline-block; font-size: 14px; font-family: Helvetica; color: rgb(0, 153, 0); line-height: 1.2; pointer-events: none; white-space: nowrap;">
-                                <font color="#000000" style="font-size: 12px">
-                                    createConduit(bytes32 conduitKey,
+                    <div xmlns="http://www.w3.org/1999/xhtml" style="display: flex; align-items: unsafe center; justify-content: unsafe center; width: 1px; height: 1px; padding-top: 69px; margin-left: 206px;">
+                        <div data-drawio-colors="color: rgb(0, 0, 0); " style="box-sizing: border-box; font-size: 0px; text-align: center;">
+                            <div style="display: inline-block; font-size: 12px; font-family: Helvetica; color: rgb(0, 0, 0); line-height: 1.2; pointer-events: none; white-space: nowrap;">
+                                <font style="font-size: 14px">
+                                    <b>
+                                        _conduits
+                                    </b>
+                                    (
+                                </font>
+                                <font>
+                                    <span style="font-size: 13px">
+                                        mapping(
+                                    </span>
                                     <br/>
-                                    address initialOwner)
-                                    <br/>
-                                    <br/>
-                                    getConduit(bytes32 conduitKey)
+                                    <font color="#006600" style="font-size: 15px">
+                                        <b>
+                                            address
+                                        </b>
+                                    </font>
+                                    <span style="font-size: 13px">
+                                        =&gt;
+                                    </span>
+                                    <b style="font-size: 13px">
+                                        <font color="#3333ff">
+                                            ConduitProperties
+                                            <br/>
+                                        </font>
+                                    </b>
+                                    <span style="font-size: 13px">
+                                        )）
+                                    </span>
                                     <br/>
                                     <br/>
                                 </font>
@@ -59,114 +122,117 @@
                         </div>
                     </div>
                 </foreignObject>
-                <text x="163" y="136" fill="#009900" font-family="Helvetica" font-size="14px" text-anchor="middle">
-                    createConduit(bytes32 condui...
+                <text x="206" y="73" fill="rgb(0, 0, 0)" font-family="Helvetica" font-size="12px" text-anchor="middle">
+                    _conduits(mapping(...
                 </text>
             </switch>
         </g>
-        <path d="M 370 29 L 370 6 L 730 6 L 730 29" fill="rgb(255, 255, 255)" stroke="rgb(0, 0, 0)" stroke-miterlimit="10" pointer-events="none"/>
-        <path d="M 370 29 L 370 116 L 730 116 L 730 29" fill="none" stroke="rgb(0, 0, 0)" stroke-miterlimit="10" pointer-events="none"/>
-        <path d="M 370 29 L 730 29" fill="none" stroke="rgb(0, 0, 0)" stroke-miterlimit="10" pointer-events="none"/>
+        <path d="M 417 23 L 417 0 L 587 0 L 587 23" fill="rgb(255, 255, 255)" stroke="rgb(0, 0, 0)" stroke-miterlimit="10" pointer-events="none"/>
+        <path d="M 417 23 L 417 110 L 587 110 L 587 23" fill="none" stroke="rgb(0, 0, 0)" stroke-miterlimit="10" pointer-events="none"/>
+        <path d="M 417 23 L 587 23" fill="none" stroke="rgb(0, 0, 0)" stroke-miterlimit="10" pointer-events="none"/>
         <g fill="#3333FF" font-family="Helvetica" font-weight="bold" pointer-events="none" text-anchor="middle" font-size="12px">
-            <text x="549.5" y="22">
+            <text x="501.5" y="16">
                 ConduitProperties
             </text>
         </g>
         <g transform="translate(-0.5 -0.5)">
             <switch>
                 <foreignObject pointer-events="none" width="100%" height="100%" requiredFeatures="http://www.w3.org/TR/SVG11/feature#Extensibility" style="overflow: visible; text-align: left;">
-                    <div xmlns="http://www.w3.org/1999/xhtml" style="display: flex; align-items: unsafe center; justify-content: unsafe center; width: 1px; height: 1px; padding-top: 70px; margin-left: 550px;">
+                    <div xmlns="http://www.w3.org/1999/xhtml" style="display: flex; align-items: unsafe center; justify-content: unsafe center; width: 1px; height: 1px; padding-top: 64px; margin-left: 502px;">
                         <div data-drawio-colors="color: rgb(0, 0, 0); " style="box-sizing: border-box; font-size: 0px; text-align: center;">
                             <div style="display: inline-block; font-size: 12px; font-family: Helvetica; color: rgb(0, 0, 0); line-height: 1.2; pointer-events: none; white-space: nowrap;">
-                                <div>
-                                    bytes32 key;
+                                <div style="font-size: 13px">
+                                    <font style="font-size: 13px">
+                                        key
+                                    </font>
                                 </div>
-                                <div>
-                                    address owner;
+                                <div style="font-size: 13px">
+                                    <font style="font-size: 13px">
+                                        owner
+                                    </font>
                                 </div>
-                                <div>
-                                    address potentialOwner;
+                                <div style="font-size: 13px">
+                                    <font style="font-size: 13px">
+                                        potentialOwner
+                                    </font>
                                 </div>
-                                <div>
-                                    address[] channels;
+                                <div style="font-size: 13px">
+                                    <font style="font-size: 13px">
+                                        channels
+                                    </font>
                                 </div>
-                                <div>
-                                    mapping(address =&gt; uint256) channelIndexesPlusOne;
+                                <div style="font-size: 13px">
+                                    <font style="font-size: 13px">
+                                        channelIndexesPlusOne
+                                    </font>
                                 </div>
                             </div>
                         </div>
                     </div>
                 </foreignObject>
-                <text x="550" y="74" fill="rgb(0, 0, 0)" font-family="Helvetica" font-size="12px" text-anchor="middle">
-                    bytes32 key;...
+                <text x="502" y="68" fill="rgb(0, 0, 0)" font-family="Helvetica" font-size="12px" text-anchor="middle">
+                    key...
                 </text>
             </switch>
         </g>
-        <path d="M 306.14 60 L 363.63 60.9" fill="none" stroke="rgb(0, 0, 0)" stroke-miterlimit="10" pointer-events="none"/>
-        <path d="M 368.88 60.98 L 361.83 64.37 L 363.63 60.9 L 361.94 57.37 Z" fill="rgb(0, 0, 0)" stroke="rgb(0, 0, 0)" stroke-miterlimit="10" pointer-events="none"/>
-        <path d="M 0 233 L 0 210 L 325 210 L 325 233" fill="rgb(255, 255, 255)" stroke="rgb(0, 0, 0)" stroke-miterlimit="10" pointer-events="none"/>
-        <path d="M 0 233 L 0 395 L 325 395 L 325 233" fill="none" stroke="rgb(0, 0, 0)" stroke-miterlimit="10" pointer-events="none"/>
-        <path d="M 0 233 L 325 233" fill="none" stroke="rgb(0, 0, 0)" stroke-miterlimit="10" pointer-events="none"/>
-        <g fill="rgb(0, 0, 0)" font-family="Helvetica" font-weight="bold" pointer-events="none" text-anchor="middle" font-size="12px">
-            <text x="162" y="226">
+        <path d="M 318.37 64.03 L 417.96 64.48" fill="none" stroke="rgb(0, 0, 0)" stroke-miterlimit="10" pointer-events="none"/>
+        <path d="M 313.12 64.01 L 320.13 60.54 L 318.37 64.03 L 320.1 67.54 Z" fill="rgb(0, 0, 0)" stroke="rgb(0, 0, 0)" stroke-miterlimit="10" pointer-events="none"/>
+        <path d="M 85.5 423 L 85.5 400 L 325.5 400 L 325.5 423" fill="rgb(255, 255, 255)" stroke="rgb(0, 0, 0)" stroke-miterlimit="10" pointer-events="none"/>
+        <path d="M 85.5 423 L 85.5 600 L 325.5 600 L 325.5 423" fill="none" stroke="rgb(0, 0, 0)" stroke-miterlimit="10" pointer-events="none"/>
+        <path d="M 85.5 423 L 325.5 423" fill="none" stroke="rgb(0, 0, 0)" stroke-miterlimit="10" pointer-events="none"/>
+        <g fill="#006600" font-family="Helvetica" font-weight="bold" pointer-events="none" text-anchor="middle" font-size="13px">
+            <text x="205" y="416.5">
                 Conduit
             </text>
         </g>
         <g transform="translate(-0.5 -0.5)">
             <switch>
                 <foreignObject pointer-events="none" width="100%" height="100%" requiredFeatures="http://www.w3.org/TR/SVG11/feature#Extensibility" style="overflow: visible; text-align: left;">
-                    <div xmlns="http://www.w3.org/1999/xhtml" style="display: flex; align-items: unsafe center; justify-content: unsafe center; width: 1px; height: 1px; padding-top: 260px; margin-left: 163px;">
-                        <div data-drawio-colors="color: rgb(0, 0, 0); " style="box-sizing: border-box; font-size: 0px; text-align: center;">
-                            <div style="display: inline-block; font-size: 12px; font-family: Helvetica; color: rgb(0, 0, 0); line-height: 1.2; pointer-events: none; white-space: nowrap;">
-                                <font style="font-size: 14px" color="#009900">
-                                    <b>
-                                        _conduits
-                                        <br/>
-                                    </b>
-                                </font>
-                                <font style="font-size: 13px">
-                                    （mapping(address =&gt;
-                                    <b>
-                                        <font color="#3333ff">
-                                            ConduitProperties
-                                        </font>
-                                    </b>
-                                    )）
-                                </font>
-                            </div>
-                        </div>
-                    </div>
-                </foreignObject>
-                <text x="163" y="264" fill="rgb(0, 0, 0)" font-family="Helvetica" font-size="12px" text-anchor="middle">
-                    _conduits...
-                </text>
-            </switch>
-        </g>
-        <g transform="translate(-0.5 -0.5)">
-            <switch>
-                <foreignObject pointer-events="none" width="100%" height="100%" requiredFeatures="http://www.w3.org/TR/SVG11/feature#Extensibility" style="overflow: visible; text-align: left;">
-                    <div xmlns="http://www.w3.org/1999/xhtml" style="display: flex; align-items: unsafe center; justify-content: unsafe center; width: 1px; height: 1px; padding-top: 342px; margin-left: 163px;">
+                    <div xmlns="http://www.w3.org/1999/xhtml" style="display: flex; align-items: unsafe center; justify-content: unsafe center; width: 1px; height: 1px; padding-top: 514px; margin-left: 205px;">
                         <div data-drawio-colors="color: #009900; " style="box-sizing: border-box; font-size: 0px; text-align: center;">
                             <div style="display: inline-block; font-size: 14px; font-family: Helvetica; color: rgb(0, 153, 0); line-height: 1.2; pointer-events: none; white-space: nowrap;">
-                                <font color="#000000" style="font-size: 12px">
-                                    createConduit(bytes32 conduitKey,
-                                    <br/>
-                                    address initialOwner)
-                                    <br/>
-                                    <br/>
-                                    getConduit(bytes32 conduitKey)
-                                    <br/>
-                                    <br/>
+                                <font color="#000000">
+                                    <div>
+                                        <font style="font-size: 14px">
+                                            _controller
+                                        </font>
+                                    </div>
+                                    <div style="font-size: 13px">
+                                        _channels(mapping(address =&gt; bool))
+                                    </div>
+                                    <div style="font-size: 13px">
+                                        <br/>
+                                    </div>
+                                    <div style="font-size: 13px">
+                                        execute()
+                                    </div>
+                                    <div style="font-size: 13px">
+                                        executeBatch1155()
+                                    </div>
+                                    <div style="font-size: 13px">
+                                        executeWithBatch1155()
+                                    </div>
+                                    <div style="font-size: 13px">
+                                        updateChannel()
+                                    </div>
+                                    <div style="font-size: 13px">
+                                        <br/>
+                                    </div>
+                                    <div style="font-size: 13px">
+                                        _transfer()
+                                    </div>
                                 </font>
                             </div>
                         </div>
                     </div>
                 </foreignObject>
-                <text x="163" y="346" fill="#009900" font-family="Helvetica" font-size="14px" text-anchor="middle">
-                    createConduit(bytes32 condui...
+                <text x="205" y="518" fill="#009900" font-family="Helvetica" font-size="14px" text-anchor="middle">
+                    _controller...
                 </text>
             </switch>
         </g>
+        <path d="M 90.63 64 L 7 64 L 7 411 L 84.78 410.6" fill="none" stroke="rgb(0, 0, 0)" stroke-miterlimit="10" pointer-events="none"/>
+        <path d="M 95.88 64 L 88.88 67.5 L 90.63 64 L 88.88 60.5 Z" fill="rgb(0, 0, 0)" stroke="rgb(0, 0, 0)" stroke-miterlimit="10" pointer-events="none"/>
     </g>
     <switch>
         <g requiredFeatures="http://www.w3.org/TR/SVG11/feature#Extensibility"/>

@@ -399,6 +399,8 @@ struct CriteriaResolver {
 
 #### 3. 受限订单和额外数据（restricted order and extra data）
 
+所谓受限制（RESTRICTED）的订单就是在成单前检查订单的时候需要进行额外的校验，只有通过校验的订单才能进行成交。
+
 受限订单是所有方法都有的，额外数据是 Advanced 特有的。我们看看具体实现。
 
 ```solidity
@@ -458,11 +460,254 @@ struct CriteriaResolver {
 
 fulfillOrder 和 fulfillAvailableOrders 方法只能指定 `msg.sender` 作为 recipient。fulfillAdvancedOrder 和 fulfillAvailableAdvancedOrders 可以指定任意的 recipient。
 
-### Conduit
+### Conduit（管道）
 
-Conduit 是一个合约，发售者通过他来设置代币授权。Conduit 的所有者可以为 Conduit 添加和删除 "channel"，而注册的 channel 可以指示 Conduit 如何转移代币。这两个概念以完全 "选择 "的方式实现了可扩展性和可升级性，给创造者、收集者和平台提供了额外的能力，使他们能够利用 Seaport 做出自己的选择，同时保持与协议上其他挂单的广泛兼容性。
+Conduit 是一个合约，发售者通过他来设置代币授权。Conduit 的所有者可以为 Conduit 添加和删除 "channel"，而注册的 channel 可以指示 Conduit 如何转移代币。Conduit 以完全 "选择 "的方式实现了可扩展性和可升级性，给创造者、收集者和平台提供了额外的能力，使他们能够利用 Seaport 做出自己的选择，同时保持与协议上其他挂单的广泛兼容性。
 
-上面 order 中的 conduitKey 就与此相关。我们看看具体是怎么实现的。
+order 中的 conduitKey 就与此相关。我们看看具体是怎么实现的。
+
+#### ConduitController 和 Conduit
+
+首先来了解一下 ConduitController 和 Conduit 这两个合约。
+
+![Conduit](Seaport.drawio.svg)
+
+#### ConduitController
+
+首先是 ConduitController（[00000000F9490004C11Cef243f5400493c00Ad63](https://etherscan.io/address/0x00000000F9490004C11Cef243f5400493c00Ad63#code)）。
+
+用来管理所有 Conduit 的合约。可以创建和查询对应的 Conduit。
+
+所有被管理的 Conduit 都放在 _conduits 这一个 map 类型的属性里。key 是 Conduit 的地址， value 是 ConduitProperties 类型。包含了 Conduit 的基本信息。
+
+##### ConduitProperties
+
+```solidity
+// ConduitControllerInterface.sol => ConduitProperties
+
+struct ConduitProperties {
+        bytes32 key; // conduitKey
+        address owner; // 当前的管理者
+        address potentialOwner; // 将要转移给的管理者
+        address[] channels; // 管理的 channel
+        mapping(address => uint256) channelIndexesPlusOne; // channel 在 channels 中的indexe + 1
+    }
+```
+
+然后就是创建 Conduit 的方法 `createConduit()`。
+
+`conduitKey` 是 bytes32 类型的数据。前20个字节是该方法的调用者的地址。后面的字节补 0。也就是说 conduitKey 其实就是由创建 Conduit 的账户地址转换而来的。
+
+`initialOwner` 是要创建的 Conduit 的 Owner。不能为空。
+
+```solidity
+// ConduitController.sol => createConduit()
+
+function createConduit(bytes32 conduitKey, address initialOwner)
+        external
+        override
+        returns (address conduit)
+    {
+        // Ensure that an initial owner has been supplied.
+        // initialOwner 不能为空
+        if (initialOwner == address(0)) {
+            revert InvalidInitialOwner();
+        }
+
+        // If the first 20 bytes of the conduit key do not match the caller...
+        // conduitKey 必须与 msg.sender 想匹配，否则报错
+        if (address(uint160(bytes20(conduitKey))) != msg.sender) {
+            // Revert with an error indicating that the creator is invalid.
+            revert InvalidCreator();
+        }
+
+        // Derive address from deployer, conduit key and creation code hash.
+        // 推算 conduit 的地址
+        conduit = address(
+            uint160(
+                uint256(
+                    keccak256(
+                        abi.encodePacked(
+                            bytes1(0xff),
+                            address(this),
+                            conduitKey,
+                            _CONDUIT_CREATION_CODE_HASH
+                        )
+                    )
+                )
+            )
+        );
+
+        // If derived conduit exists, as evidenced by comparing runtime code...
+        // 如果 conduit 已经存在，报错
+        if (conduit.codehash == _CONDUIT_RUNTIME_CODE_HASH) {
+            // Revert with an error indicating that the conduit already exists.
+            revert ConduitAlreadyExists(conduit);
+        }
+
+        // Deploy the conduit via CREATE2 using the conduit key as the salt.
+        // 使用 CREATE2 方法创建合约
+        new Conduit{ salt: conduitKey }();
+
+        // Initialize storage variable referencing conduit properties.
+        // 创建 conduitProperties
+        ConduitProperties storage conduitProperties = _conduits[conduit];
+
+        // Set the supplied initial owner as the owner of the conduit.
+        conduitProperties.owner = initialOwner;
+
+        // Set conduit key used to deploy the conduit to enable reverse lookup.
+        conduitProperties.key = conduitKey;
+
+        // Emit an event indicating that the conduit has been deployed.
+        // 发送 NewConduit 事件
+        emit NewConduit(conduit, conduitKey);
+
+        // Emit an event indicating that conduit ownership has been assigned.
+        // 发送 OwnershipTransferred 事件
+        emit OwnershipTransferred(conduit, address(0), initialOwner);
+    }
+```
+
+通过调用 updateChannel() 来管理 Conduit 的 channel。需要注意的是虽然 Conduit 合约有 `updateChannel()` 方法，但是 Conduit 的 channel 必须由 ConduitController 来管理，不能直接调用。
+
+```solidity
+// ConduitController.sol => updateChannel()
+
+function updateChannel(
+        address conduit,
+        address channel,
+        bool isOpen
+    ) external override {
+        // Ensure the caller is the current owner of the conduit in question.
+        // 只有 owner 才能调用
+        _assertCallerIsConduitOwner(conduit);
+
+        // Call the conduit, updating the channel.
+        // 调用 conduit 的 updateChannel 方法
+        ConduitInterface(conduit).updateChannel(channel, isOpen);
+
+        // Retrieve storage region where channels for the conduit are tracked.
+        // 查找 conduit 对应的 conduitProperties 信息
+        ConduitProperties storage conduitProperties = _conduits[conduit];
+
+        // Retrieve the index, if one currently exists, for the updated channel.
+        // 查找 channel 的 索引，如果不存在默认是是 0
+        uint256 channelIndexPlusOne = (
+            conduitProperties.channelIndexesPlusOne[channel]
+        );
+
+        // Determine whether the updated channel is already tracked as open.
+        // 判断 channel 状态是否是 open，
+        bool channelPreviouslyOpen = channelIndexPlusOne != 0;
+
+        // If the channel has been set to open and was previously closed...
+        // 如果是要打开且当前状态不是打开的
+        if (isOpen && !channelPreviouslyOpen) {
+            // Add the channel to the channels array for the conduit.
+            // 更新 conduitProperties 里 channels 的数据
+            conduitProperties.channels.push(channel);
+
+            // Add new open channel length to associated mapping as index + 1.
+            // 更新 conduitProperties 里 channelIndexesPlusOne 的数据
+            conduitProperties.channelIndexesPlusOne[channel] = (
+                conduitProperties.channels.length
+            );
+        } else if (!isOpen && channelPreviouslyOpen) { 
+            // 如果是要关闭且当前状态是打开
+
+            // Set a previously open channel as closed via "swap & pop" method.
+            // Decrement located index to get the index of the closed channel.
+            uint256 removedChannelIndex;
+
+            // Skip underflow check as channelPreviouslyOpen being true ensures
+            // that channelIndexPlusOne is nonzero.
+            // 跳过下溢检查，因为 channelPreviouslyOpen 为真已经确保了 channelIndexPlusOne 不为零。
+            unchecked {
+                removedChannelIndex = channelIndexPlusOne - 1;
+            }
+
+            // Use length of channels array to determine index of last channel.
+            // 获得 channels 数组中最后一个元素的索引
+            uint256 finalChannelIndex = conduitProperties.channels.length - 1;
+
+            // If closed channel is not last channel in the channels array...
+            // 如果要关闭的 channel 不是最后一个元素
+            if (finalChannelIndex != removedChannelIndex) {
+                // Retrieve the final channel and place the value on the stack.
+                // 获得最后一个 channel 的值
+                address finalChannel = (
+                    conduitProperties.channels[finalChannelIndex]
+                );
+
+                // Overwrite the removed channel using the final channel value.
+                // 将最后一个 channel 的值赋值给要关闭的 channel 的位置
+                conduitProperties.channels[removedChannelIndex] = finalChannel;
+
+                // Update final index in associated mapping to removed index.
+                // 更新 conduitProperties 数据
+                conduitProperties.channelIndexesPlusOne[finalChannel] = (
+                    channelIndexPlusOne
+                );
+            }
+
+            // Remove the last channel from the channels array for the conduit.
+            // 删除最后一个元素
+            conduitProperties.channels.pop();
+
+            // Remove the closed channel from associated mapping of indexes.
+            // 删除 channelIndexesPlusOne 中的数据
+            delete conduitProperties.channelIndexesPlusOne[channel];
+        }
+    }
+```
+
+涉及到权限管理的方法有三个 `transferOwnership()`、`cancelOwnershipTransfer()` 和  `acceptOwnership()`。
+
+`transferOwnership()` 必须是对应 Conduit 的 owner 发起的。发起后并不会直接将权限给对应的地址。而是将对应的地址赋值给 ConduitProperties 中的 potentialOwner。 对应的地址调用 `acceptOwnership()` 后才会成为对应 Conduit 的 owner。
+
+#### Conduit
+
+Conduit 合约继承自 TokenTransferrer。也就是说 Conduit 合约负责的是 Token 的转移。他里面有各种转移 token 的方法。
+
+其实在订单中如果不使用 Conduit 的话，最终调用的转移 token 的方法就是 TokenTransferrer 合约里的方法。使用 Conduit 的目的就是控制代币的转移。可以通过设置 channel 和 channel 的状态来控制 token 的转移。
+
+这一切个关键就在于 onlyOpenChannel 这个函数修饰器上。通过它来确保调用者是一个注册在 Conduit 上的 channel， 并且该 channel 是打开的。
+
+```solidity
+// Conduit.sol => onlyOpenChannel
+
+modifier onlyOpenChannel() {
+        // Utilize assembly to access channel storage mapping directly.
+        // 直接访问存储 channel 的 mapping
+        assembly {
+            // Write the caller to scratch space.
+            // 将 caller 写入
+            mstore(ChannelKey_channel_ptr, caller())
+
+            // Write the storage slot for _channels to scratch space.
+            mstore(ChannelKey_slot_ptr, _channels.slot)
+
+            // Derive the position in storage of _channels[msg.sender]
+            // and check if the stored value is zero.
+            // 推导出 _channels[msg.sender] 的存储位置，并检查是否是 0， 如果是 0 则表示 channel 不是打开的，报 ChannelClosed 的错误
+            if iszero(
+                sload(keccak256(ChannelKey_channel_ptr, ChannelKey_length))
+            ) {
+                // The caller is not an open channel; revert with
+                // ChannelClosed(caller). First, set error signature in memory.
+                mstore(ChannelClosed_error_ptr, ChannelClosed_error_signature)
+
+                // Next, set the caller as the argument.
+                mstore(ChannelClosed_channel_ptr, caller())
+
+                // Finally, revert, returning full custom error with argument.
+                revert(ChannelClosed_error_ptr, ChannelClosed_error_length)
+            }
+        }
+```
+
+#### 订单成交中涉及的逻辑
 
 
 
@@ -676,7 +921,6 @@ function fulfillOrder(
 ```
 
 从上面的 ABI 上，我们可以看出大部分的内容前面都做过解析。只有两个我们现在还不了解。一个是 `conduitKey，` 一个是 `fulfillerConduitKey。` BasicOrder 里面也有类似的 `offererConduitKey` 和 `fulfillerConduitKey。` 他们的作用都是一样的。
-
 
 ### fulfillAdvancedOrder
 
