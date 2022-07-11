@@ -680,7 +680,7 @@ function updateChannel(
 
 在调用成单方法的时候可以指定 Conduit Key。
 
-对于 fulfillBasicOrder()： 
+对于 fulfillBasicOrder()：
 
 通过 offererConduitKey 指定 offerToken 转移用到的 Conduit Key。
 通过 fulfillerConduitKey 指定 considerationToken 转移用到的 Conduit Key。
@@ -1127,7 +1127,7 @@ execute 方法是用来执行批量 token 转移的。它有 onlyOpenChannel 的
 
 ##### 3. _transfer
 
-`_transfer()` 方法跟 Executor 合约中的方法类似。都是根据 token 的类型调用不同的方法。 
+`_transfer()` 方法跟 Executor 合约中的方法类似。都是根据 token 的类型调用不同的方法。
 
 这些执行 token 转移的方法就是 TokenTransferrer 合约里实现的方法。跟上面没有指定 conduitKey 的时候的转移方法是一个方法。
 
@@ -1170,7 +1170,6 @@ function _transfer(ConduitTransfer calldata item) internal {
         }
     }
 ```
-
 
 #### Conduit 总结
 
@@ -1924,9 +1923,358 @@ executions 是最终执行的货币转移的具体信息。
 
 对一组订单（大于等于2个）进行匹配。以这种方式履行的订单没有一个明确的履行者。因此交易成功的事件中 recipient 为空。要想获取到这种成单方式的 recipient。需要根据多个订单综合考虑。
 
-fulfillments 这个参数跟就是对订单进行撮合后最终 token 的提供者和接收者。
+#### fulfillments
 
-返回值 executions 跟 fulfillAvailableOrders 中的一样。
+fulfillments 参数跟是对订单进行撮合后组织成的最终 token 的提供者和接收者信息的集合。
+
+数据结构如下
+
+```solidity
+fulfillments(
+  offerComponents(
+    uint256 orderIndex,
+    uint256 itemIndex
+  )[],
+  considerationComponents(
+    uint256 orderIndex,
+    uint256 itemIndex
+  )[]
+)[]
+```
+
+现在举个例子：
+
+订单1 提供了两个不同 token id 的 ERC1155 的 offer，consideration 中有三个项目，一个是给offerer， 一个是手续费，一个是给某个地址的 tips（小费）。
+
+订单2 提供了一个 eth 的 offer，consideration 中有两个 ERC1155 的 项目。
+
+```solidity
+//===============order1
+{
+  "parameters": {
+    "offerer": "0x62D2A72d3978c95B05c696cBa8AdA8f81Be032a5",
+    "zone": "0xCa31f21525C0DEE86F773F520180cC3C42c770f3",
+    "offer": [{
+      "itemType": 3,
+      "token": "0xB95791a07B1c3Ed679c4EFb14eBF9B261ea95019",
+      "identifierOrCriteria": {
+        "type": "BigNumber",
+        "hex": "0x0eb139b562cba6f2287d359fa27bc451"
+      },
+      "startAmount": {
+        "type": "BigNumber",
+        "hex": "0x9ba5f830"
+      },
+      "endAmount": {
+        "type": "BigNumber",
+        "hex": "0x9ba5f830"
+      }
+    }, {
+      "itemType": 3,
+      "token": "0xB95791a07B1c3Ed679c4EFb14eBF9B261ea95019",
+      "identifierOrCriteria": {
+        "type": "BigNumber",
+        "hex": "0x142b26b9c3e2ae0fd3e6abb227312a5a"
+      },
+      "startAmount": {
+        "type": "BigNumber",
+        "hex": "0x7e873f62"
+      },
+      "endAmount": {
+        "type": "BigNumber",
+        "hex": "0x7e873f62"
+      }
+    }],
+    "consideration": [{
+      "itemType": 0,
+      "token": "0x0000000000000000000000000000000000000000",
+      "identifierOrCriteria": {
+        "type": "BigNumber",
+        "hex": "0x00"
+      },
+      "startAmount": {
+        "type": "BigNumber",
+        "hex": "0x8ac7230489e80000"
+      },
+      "endAmount": {
+        "type": "BigNumber",
+        "hex": "0x8ac7230489e80000"
+      },
+      "recipient": "0x62D2A72d3978c95B05c696cBa8AdA8f81Be032a5"
+    }, {
+      "itemType": 0,
+      "token": "0x0000000000000000000000000000000000000000",
+      "identifierOrCriteria": {
+        "type": "BigNumber",
+        "hex": "0x00"
+      },
+      "startAmount": {
+        "type": "BigNumber",
+        "hex": "0x0de0b6b3a7640000"
+      },
+      "endAmount": {
+        "type": "BigNumber",
+        "hex": "0x0de0b6b3a7640000"
+      },
+      "recipient": "0xCa31f21525C0DEE86F773F520180cC3C42c770f3"
+    }, {
+      "itemType": 0,
+      "token": "0x0000000000000000000000000000000000000000",
+      "identifierOrCriteria": {
+        "type": "BigNumber",
+        "hex": "0x00"
+      },
+      "startAmount": {
+        "type": "BigNumber",
+        "hex": "0x0de0b6b3a7640000"
+      },
+      "endAmount": {
+        "type": "BigNumber",
+        "hex": "0x0de0b6b3a7640000"
+      },
+      "recipient": "0x1F64195527D6f6Af820bFC826778B7D1f0F097f0"
+    }],
+    "totalOriginalConsiderationItems": 3,
+    "orderType": 0,
+    "zoneHash": "0x0000000000000000000000000000000000000000000000000000000000000000",
+    "salt": "0x774eaa9accb20a0ff328dc1e2fdb2296469904dc68441753543aced68b284646",
+    "conduitKey": "0x0000000000000000000000000000000000000000000000000000000000000000",
+    "startTime": 0,
+    "endTime": {
+      "type": "BigNumber",
+      "hex": "0xff00000000000000000000000000"
+    }
+  },
+  "signature": "0x29f06c925e86ded2dd40e8db5f039e57db1777977defc58bc654592a8efc11531df12b249efb921db1ddf4db874cbe08d86ac584f7bc9006522e8b9989059de71c",
+  "numerator": 1,
+  "denominator": 1,
+  "extraData": "0x"
+}
+//===============order2
+{
+  "parameters": {
+    "offerer": "0x0e57dFB17A6420e85784F5Cf946c8A2900F4Ac23",
+    "zone": "0xCa31f21525C0DEE86F773F520180cC3C42c770f3",
+    "offer": [{
+      "itemType": 0,
+      "token": "0x0000000000000000000000000000000000000000",
+      "identifierOrCriteria": {
+        "type": "BigNumber",
+        "hex": "0x00"
+      },
+      "startAmount": {
+        "type": "BigNumber",
+        "hex": "0xa688906bd8b00000"
+      },
+      "endAmount": {
+        "type": "BigNumber",
+        "hex": "0xa688906bd8b00000"
+      },
+      "recipient": "0x62D2A72d3978c95B05c696cBa8AdA8f81Be032a5"
+    }],
+    "consideration": [{
+      "itemType": 3,
+      "token": "0xB95791a07B1c3Ed679c4EFb14eBF9B261ea95019",
+      "identifierOrCriteria": {
+        "type": "BigNumber",
+        "hex": "0x0eb139b562cba6f2287d359fa27bc451"
+      },
+      "startAmount": {
+        "type": "BigNumber",
+        "hex": "0x9ba5f830"
+      },
+      "endAmount": {
+        "type": "BigNumber",
+        "hex": "0x9ba5f830"
+      },
+      "recipient": "0x0e57dFB17A6420e85784F5Cf946c8A2900F4Ac23"
+    }, {
+      "itemType": 3,
+      "token": "0xB95791a07B1c3Ed679c4EFb14eBF9B261ea95019",
+      "identifierOrCriteria": {
+        "type": "BigNumber",
+        "hex": "0x142b26b9c3e2ae0fd3e6abb227312a5a"
+      },
+      "startAmount": {
+        "type": "BigNumber",
+        "hex": "0x7e873f62"
+      },
+      "endAmount": {
+        "type": "BigNumber",
+        "hex": "0x7e873f62"
+      },
+      "recipient": "0x0e57dFB17A6420e85784F5Cf946c8A2900F4Ac23"
+    }],
+    "totalOriginalConsiderationItems": 2,
+    "orderType": 0,
+    "zoneHash": "0x0000000000000000000000000000000000000000000000000000000000000000",
+    "salt": "0x9a942141e192f27df840bd0fdb9262b54ec695f4059aae6a37ac84f7c7ec3222",
+    "conduitKey": "0x0000000000000000000000000000000000000000000000000000000000000000",
+    "startTime": 0,
+    "endTime": {
+      "type": "BigNumber",
+      "hex": "0xff00000000000000000000000000"
+    }
+  },
+  "signature": "0x7e1fcdc7da6dd36a234e0f9ca45bfc388c3fb621a29bd6cbf571834fde9d9be0094d8ea2320017201776503c4d164849d3047ca5495307dc25ae08b406d422921b",
+  "numerator": 1,
+  "denominator": 1,
+  "extraData": "0x"
+}
+```
+
+fulfillments 是 具体 每个订单 offer 中的项目与另外一个订单中具体哪一个项目进行匹配的信息。
+
+比如上面这种情况下传入的 fulfillments。
+
+```solidity
+[{ // 第 1 个订单的 offer 中第 1 个项目与第 2 个订单的 consideration 的第 1 个项目匹配
+  "offerComponents": [{
+    "orderIndex": 0,
+    "itemIndex": 0
+  }],
+  "considerationComponents": [{
+    "orderIndex": 1,
+    "itemIndex": 0
+  }]
+}, 
+{ // 第 1 个订单的 offer 中第 2 个项目与第 2 个订单的 consideration 的第 2 个项目匹配
+  "offerComponents": [{
+    "orderIndex": 0,
+    "itemIndex": 1
+  }],
+  "considerationComponents": [{
+    "orderIndex": 1,
+    "itemIndex": 1
+  }]
+}, 
+{ // 第 2 个订单的 offer 中第 1 个项目与第 1 个订单的 consideration 的第 1 个项目匹配
+  "offerComponents": [{
+    "orderIndex": 1,
+    "itemIndex": 0
+  }],
+  "considerationComponents": [{
+    "orderIndex": 0,
+    "itemIndex": 0
+  }]
+}, 
+{ // 第 2 个订单的 offer 中第 1 个项目与第 1 个订单的 consideration 的第 2 个项目匹配
+  "offerComponents": [{
+    "orderIndex": 1,
+    "itemIndex": 0
+  }],
+  "considerationComponents": [{
+    "orderIndex": 0,
+    "itemIndex": 1
+  }]
+}, 
+{ // 第 2 个订单的 offer 中第 1 个项目与第 1 个订单的 consideration 的第 3 个项目匹配
+  "offerComponents": [{
+    "orderIndex": 1,
+    "itemIndex": 0
+  }],
+  "considerationComponents": [{
+    "orderIndex": 0,
+    "itemIndex": 2
+  }]
+}]
+```
+
+#### 返回值 executions
+
+返回值 executions 跟 fulfillAvailableOrders 中的一样。都是最终进行转移的 token 的具体信息
+
+```solidity
+[
+    [
+        [
+            3,
+            "0xB95791a07B1c3Ed679c4EFb14eBF9B261ea95019",
+            {
+                "type": "BigNumber",
+                "hex": "0x0eb139b562cba6f2287d359fa27bc451"
+            },
+            {
+                "type": "BigNumber",
+                "hex": "0x9ba5f830"
+            },
+            "0x0e57dFB17A6420e85784F5Cf946c8A2900F4Ac23"
+        ],
+        "0x62D2A72d3978c95B05c696cBa8AdA8f81Be032a5",
+        "0x0000000000000000000000000000000000000000000000000000000000000000"
+    ],
+    [
+        [
+            3,
+            "0xB95791a07B1c3Ed679c4EFb14eBF9B261ea95019",
+            {
+                "type": "BigNumber",
+                "hex": "0x142b26b9c3e2ae0fd3e6abb227312a5a"
+            },
+            {
+                "type": "BigNumber",
+                "hex": "0x7e873f62"
+            },
+            "0x0e57dFB17A6420e85784F5Cf946c8A2900F4Ac23"
+        ],
+        "0x62D2A72d3978c95B05c696cBa8AdA8f81Be032a5",
+        "0x0000000000000000000000000000000000000000000000000000000000000000"
+    ],
+    [
+        [
+            0,
+            "0x0000000000000000000000000000000000000000",
+            {
+                "type": "BigNumber",
+                "hex": "0x00"
+            },
+            {
+                "type": "BigNumber",
+                "hex": "0x8ac7230489e80000"
+            },
+            "0x62D2A72d3978c95B05c696cBa8AdA8f81Be032a5"
+        ],
+        "0x0e57dFB17A6420e85784F5Cf946c8A2900F4Ac23",
+        "0x0000000000000000000000000000000000000000000000000000000000000000"
+    ],
+    [
+        [
+            0,
+            "0x0000000000000000000000000000000000000000",
+            {
+                "type": "BigNumber",
+                "hex": "0x00"
+            },
+            {
+                "type": "BigNumber",
+                "hex": "0x0de0b6b3a7640000"
+            },
+            "0xCa31f21525C0DEE86F773F520180cC3C42c770f3"
+        ],
+        "0x0e57dFB17A6420e85784F5Cf946c8A2900F4Ac23",
+        "0x0000000000000000000000000000000000000000000000000000000000000000"
+    ],
+    [
+        [
+            0,
+            "0x0000000000000000000000000000000000000000",
+            {
+                "type": "BigNumber",
+                "hex": "0x00"
+            },
+            {
+                "type": "BigNumber",
+                "hex": "0x0de0b6b3a7640000"
+            },
+            "0x1F64195527D6f6Af820bFC826778B7D1f0F097f0"
+        ],
+        "0x0e57dFB17A6420e85784F5Cf946c8A2900F4Ac23",
+        "0x0000000000000000000000000000000000000000000000000000000000000000"
+    ]
+]
+```
+
+具体方法的结构
 
 ```solidity
 function matchOrders(
@@ -2065,50 +2413,69 @@ function matchAdvancedOrders(
 ### 当通过 fulfillOrder 或 fulfillAdvancedOrder 完成一个订单时
 
 1. Hash order
-  - 为 offer 项目和 consideration 项目导出哈希值
-  - 检索 offerer 的当前计数器
-  - 推导订单的哈希值
+
+- 为 offer 项目和 consideration 项目导出哈希值
+- 检索 offerer 的当前计数器
+- 推导订单的哈希值
+
 2. 执行初始验证
-  - 确保当前时间是在订单范围内
-  - 确保订单类型的有效调用者；如果订单类型是限制性的，并且调用者不是 offer 或 Zone，则调用 Zone 的校验方法以确定订单是否有效。
+
+- 确保当前时间是在订单范围内
+- 确保订单类型的有效调用者；如果订单类型是限制性的，并且调用者不是 offer 或 Zone，则调用 Zone 的校验方法以确定订单是否有效。
+
 3. 检索并更新订单状态
-  - 确保订单没有被取消
-  - 确保订单没有被完全填充
-    - 如果订单被部分填充，必要时减少所提供的填充量，使订单不被过度填充。
-  - 如果尚未验证，则验证订单签名
-  - 根据偏好+可用金额，确定要填充的部分
-  - 更新订单状态（已验证+填充部分）。
+
+- 确保订单没有被取消
+- 确保订单没有被完全填充
+  - 如果订单被部分填充，必要时减少所提供的填充量，使订单不被过度填充。
+- 如果尚未验证，则验证订单签名
+- 根据偏好+可用金额，确定要填充的部分
+- 更新订单状态（已验证+填充部分）。
+
 4. 确定每个项目的金额
-  - 比较 startAmount 和 endAmount
-    - 如果它们相等：项目的金额就是其中的一个，如果是部分填充，项目的金额就是其乘以一定比率后的结果。
-    - 如果不相等：根据当前区块的时间开确认当前的项目金额。
+
+- 比较 startAmount 和 endAmount
+  - 如果它们相等：项目的金额就是其中的一个，如果是部分填充，项目的金额就是其乘以一定比率后的结果。
+  - 如果不相等：根据当前区块的时间开确认当前的项目金额。
+
 5. 应用标准解析器（criteria resolvers）
-  - 确保每个标准解析器都指向一个基于标准的订单项目
-  - 如果项目有一个非零的 criteria root，确保为每个项目提供的标识符通过包含证明是有效的
-  - 更新每个项目的类型和标识符
-  - 确保所有剩余的项目都不是基于标准的
+
+- 确保每个标准解析器都指向一个基于标准的订单项目
+- 如果项目有一个非零的 criteria root，确保为每个项目提供的标识符通过包含证明是有效的
+- 更新每个项目的类型和标识符
+- 确保所有剩余的项目都不是基于标准的
+
 6. 发出OrderFulfilled事件
-  - 包括更新的信息（比如每个项目的金额和经过解析后的项目的 token id）。
+
+- 包括更新的信息（比如每个项目的金额和经过解析后的项目的 token id）。
+
 7. 将 offer 项目从 offerer 转移到调用者
-  - 根据订单类型，直接使用 conduit 或 Seaport 来进行转移。
+
+- 根据订单类型，直接使用 conduit 或 Seaport 来进行转移。
+
 8. 将 consideration 项目从调用者转移到各自的接受者
-  - 根据调用者的声明，使用 conduit 或 Seaport 来进行转移。
+
+- 根据调用者的声明，使用 conduit 或 Seaport 来进行转移。
 
 ### Match Orders
 
 当通过 matchOrders 或 matchAdvancedOrders 匹配一组订单时，步骤1到6几乎是相同的，但从对每个提供的订单进行执行这里开始，实现方式与标准的履行方式不同了。
 
 7. 执行交易
-  - 确保每个 fulfillment 指的是一个或多个 offer 项目和一个或多个 consideration 项目，他们都具有相同的类型和 id ，并且每个 offer 项目具有相同的批准来源，每个 consideration 项目具有相同的接收者
-  - 将每个 offer 项目和每个 consideration 项目的数量减少到零，并跟踪每个项目减少的总金额
-  - 比较每个项目的总金额，并将剩余的金额加到订单相应一侧的第一个项目上。
-  - 为每项 fulfillment 返回一个单一的执行结果
+
+- 确保每个 fulfillment 指的是一个或多个 offer 项目和一个或多个 consideration 项目，他们都具有相同的类型和 id ，并且每个 offer 项目具有相同的批准来源，每个 consideration 项目具有相同的接收者
+- 将每个 offer 项目和每个 consideration 项目的数量减少到零，并跟踪每个项目减少的总金额
+- 比较每个项目的总金额，并将剩余的金额加到订单相应一侧的第一个项目上。
+- 为每项 fulfillment 返回一个单一的执行结果
+
 8. 扫描每个 consideration 项目，确保没有一个项目的剩余金额为零
 9. 进行转账
-  - 根据最初的订单类型，直接使用 conduit 或 Seaport 进行转移。
-  - 忽略to == from 或 amount == 0 的 fulfillment
+
+- 根据最初的订单类型，直接使用 conduit 或 Seaport 进行转移。
+- 忽略to == from 或 amount == 0 的 fulfillment
 
 ## 参考
+
 1. Seaport Overview: [https://docs.opensea.io/v2.0/reference/seaport-overview](https://docs.opensea.io/v2.0/reference/seaport-overview)
 2. ProjectOpenSea/seaport: [https://github.com/ProjectOpenSea/seaport](https://github.com/ProjectOpenSea/seaport)
 3. Introducing Seaport Protocol: [https://opensea.io/blog/announcements/introducing-seaport-protocol/](https://opensea.io/blog/announcements/introducing-seaport-protocol/)
