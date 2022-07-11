@@ -269,7 +269,7 @@ conduitKey 跟 conduit 是密切关联的。项目方，拥有者或者平台可
 
 计数器，要与 offerer 的计数器相同。
 
-offerer 可以通过调用 `incrementCounter` 立即取消与当前计数器签署的所有订单。
+offerer 可以通过调用 `incrementCounter()` 立即取消与当前计数器签署的所有订单。
 
 ## Order Fulfillment
 
@@ -474,9 +474,9 @@ order 中的 conduitKey 就与此相关。我们看看具体是怎么实现的�
 
 #### ConduitController
 
-首先是 ConduitController（[00000000F9490004C11Cef243f5400493c00Ad63](https://etherscan.io/address/0x00000000F9490004C11Cef243f5400493c00Ad63#code)）。
+地址（[00000000F9490004C11Cef243f5400493c00Ad63](https://etherscan.io/address/0x00000000F9490004C11Cef243f5400493c00Ad63#code)）。
 
-用来管理所有 Conduit 的合约。可以创建和查询对应的 Conduit。
+ConduitController 用来管理所有 Conduit 的合约。可以创建和查询对应的 Conduit 具体信息。
 
 所有被管理的 Conduit 都放在 _conduits 这一个 map 类型的属性里。key 是 Conduit 的地址， value 是 ConduitProperties 类型。包含了 Conduit 的基本信息。
 
@@ -494,7 +494,9 @@ struct ConduitProperties {
     }
 ```
 
-然后就是创建 Conduit 的方法 `createConduit()`。
+##### createConduit
+
+ `createConduit()` 是创建 Conduit 的方法。
 
 `conduitKey` 是 bytes32 类型的数据。前20个字节是该方法的调用者的地址。后面的字节补 0。也就是说 conduitKey 其实就是由创建 Conduit 的账户地址转换而来的。
 
@@ -568,6 +570,8 @@ function createConduit(bytes32 conduitKey, address initialOwner)
         emit OwnershipTransferred(conduit, address(0), initialOwner);
     }
 ```
+
+#### updateChannel
 
 通过调用 updateChannel() 来管理 Conduit 的 channel。需要注意的是虽然 Conduit 合约有 `updateChannel()` 方法，但是 Conduit 的 channel 必须由 ConduitController 来管理，不能直接调用。
 
@@ -662,15 +666,398 @@ function updateChannel(
     }
 ```
 
+##### Ownership
+
 涉及到权限管理的方法有三个 `transferOwnership()`、`cancelOwnershipTransfer()` 和  `acceptOwnership()`。
 
 `transferOwnership()` 必须是对应 Conduit 的 owner 发起的。发起后并不会直接将权限给对应的地址。而是将对应的地址赋值给 ConduitProperties 中的 potentialOwner。 对应的地址调用 `acceptOwnership()` 后才会成为对应 Conduit 的 owner。
 
+#### 订单成交中涉及 token 转移的逻辑
+
+在进一步了解 Conduit 之前需要先对订单中的 token 转移的逻辑有个进本了解。
+
+##### 1. 指定 Conduit Key
+
+在调用成单方法的时候可以指定 Conduit Key。
+
+对于 fulfillBasicOrder()： 
+
+通过 offererConduitKey 指定 offerToken 转移用到的 Conduit Key。
+通过 fulfillerConduitKey 指定 considerationToken 转移用到的 Conduit Key。
+
+对于 fulfillOrder()、fulfillAdvancedOrder()、fulfillAvailableOrders()、fulfillAvailableAdvancedOrders()：
+
+通过 conduitKey 指定 offer 中的 token 转移用到的 Conduit Key。
+通过 fulfillerConduitKey 指定 consideration 中的 token 转移用到的 Conduit Key。
+
+对于 matchOrders()、matchAdvancedOrders()：
+
+通过 conduitKey 指定对应 order 中的 token 转移用到的 Conduit Key。
+
+##### 2. 处理 order 中的 offer 和 consideration
+
+所有成单方法最终会调用两个方法来处理 token 转移。分别是 `_applyFractionsAndTransferEach()` 和 `_performFinalChecksAndExecuteOrders()`。涉及到 conduit 的基本逻辑都一样。我们这里以 `_applyFractionsAndTransferEach()` 来进行分析(省略部分代码)。
+
+```solidity
+// OrderFulfiller.sol => _applyFractionsAndTransferEach()
+
+function _applyFractionsAndTransferEach(
+        OrderParameters memory orderParameters,
+        uint256 numerator,
+        uint256 denominator,
+        bytes32 fulfillerConduitKey,
+        address recipient
+    ) internal {
+
+        ...
+
+        // 初始化一个数组，用来存储转移 token 的时候用到的数据
+        bytes memory accumulator = new bytes(AccumulatorDisarmed);
+
+        unchecked {
+            
+            ...
+
+            uint256 totalOfferItems = orderParameters.offer.length;
+
+            for (uint256 i = 0; i < totalOfferItems; ++i) {
+                // Retrieve the offer item.
+                OfferItem memory offerItem = orderParameters.offer[i];
+
+                ...
+
+                // 转移 offer 中的 token
+                _transferOfferItem(
+                    offerItem,
+                    orderParameters.offerer,
+                    orderParameters.conduitKey,
+                    accumulator
+                );
+            }
+        }
+
+        // Put ether value supplied by the caller on the stack.
+        uint256 etherRemaining = msg.value;
+
+        unchecked {
+
+            ...
+            
+            uint256 totalConsiderationItems = orderParameters
+                .consideration
+                .length;
+
+            for (uint256 i = 0; i < totalConsiderationItems; ++i) {
+                // Retrieve the consideration item.
+                ConsiderationItem memory considerationItem = (
+                    orderParameters.consideration[i]
+                );
+
+                ...
+
+                // 转移 consideration 中的 token
+                _transferConsiderationItem(
+                    considerationItem,
+                    msg.sender,
+                    fulfillerConduitKey,
+                    accumulator
+                );
+            }
+        }
+
+        // 通过调用 conduit 来触发剩余积累下来的转账
+        _triggerIfArmed(accumulator);
+
+        // 如果还有剩余 eth，就转移回给 caller
+        if (etherRemaining != 0) {
+            _transferEth(payable(msg.sender), etherRemaining);
+        }
+    }
+```
+
+需要特别注意的是 accumulator 这个字节数组。它用来存储所有将要进行转移的 token 的相关信息。
+
+`_transferOfferItem()` 和 `_transferConsiderationItem()` 最后都被转化为 `_transferReceivedItem()` 方法。这个方法最终又指向 `_transfer()` 方法。而由于当前合约 OrderFulfiller 继承自 Executor，所以这两个函数最终都会调用 `Executor` 里的 `_transfer()` 方法。在 `_transfer()` 方法中如果 `conduitKey` 没有指定就直接进行转移。否则，就将转移需要的数据插入到 accumulator 中。
+
+`_triggerIfArmed()` 方法最终会调用 `_trigger()`方法。接收一个 accumulator。将使用里面的 token 数据调用对应 Conduit 合约的 `execute()` 方法来完成最终的转移。
+
+##### 3. _transfer()
+
+这个方法简单来说就是根据 token 的类型来调用对应的方法。具体实现如下。
+
+```solidity
+// Executor.sol => _transfer()
+
+function _transfer(
+        ReceivedItem memory item,
+        address from,
+        bytes32 conduitKey,
+        bytes memory accumulator
+    ) internal {
+        // If the item type indicates Ether or a native token...
+        if (item.itemType == ItemType.NATIVE) {
+            // Ensure neither the token nor the identifier parameters are set.
+            if ((uint160(item.token) | item.identifier) != 0) {
+                revert UnusedItemParameters();
+            }
+
+            // transfer the native tokens to the recipient.
+            _transferEth(item.recipient, item.amount);
+        } else if (item.itemType == ItemType.ERC20) {
+            // Ensure that no identifier is supplied.
+            if (item.identifier != 0) {
+                revert UnusedItemParameters();
+            }
+
+            // Transfer ERC20 tokens from the source to the recipient.
+            _transferERC20(
+                item.token,
+                from,
+                item.recipient,
+                item.amount,
+                conduitKey,
+                accumulator
+            );
+        } else if (item.itemType == ItemType.ERC721) {
+            // Transfer ERC721 token from the source to the recipient.
+            _transferERC721(
+                item.token,
+                from,
+                item.recipient,
+                item.identifier,
+                item.amount,
+                conduitKey,
+                accumulator
+            );
+        } else {
+            // Transfer ERC1155 token from the source to the recipient.
+            _transferERC1155(
+                item.token,
+                from,
+                item.recipient,
+                item.identifier,
+                item.amount,
+                conduitKey,
+                accumulator
+            );
+        }
+    }
+```
+
+##### 4. _transferERC721()
+
+各种类型转移方法逻辑都很类似，选取 `_transferERC721()` 来看一下具体的逻辑。
+
+```solidity
+// Executor.sol => _transferERC721()
+
+function _transferERC721(
+        address token,
+        address from,
+        address to,
+        uint256 identifier,
+        uint256 amount,
+        bytes32 conduitKey,
+        bytes memory accumulator
+    ) internal {
+        // Trigger accumulated transfers if the conduits differ.
+        // 如果当前传入的 conduitKey 跟之前存储在 accumulator 里的数据的 conduitKey 不同，则先将之前累积的转移全部执行。
+        // 这种情况一般是 offer 和 consideration 的 conduitKey 都进行了指定，而且由于他们不相同。
+        // 所以要先把 offer 里的 token 转移都进行执行，然后在执行 consideration 里的 token 转移。
+        _triggerIfArmedAndNotAccumulatable(accumulator, conduitKey);
+
+        // If no conduit has been specified...
+        // 未指定 conduit
+        if (conduitKey == bytes32(0)) {
+            // Ensure that exactly one 721 item is being transferred.
+            if (amount != 1) {
+                revert InvalidERC721TransferAmount();
+            }
+
+            // Perform transfer via the token contract directly.
+            // 直接进行转移，调用的是 TokenTransferrer 合约里实现的方法
+            _performERC721Transfer(token, from, to, identifier);
+        } else {
+            // Insert the call to the conduit into the accumulator.
+            // 将 conduit 信息插入到 accumulator 中
+            _insert(
+                conduitKey,
+                accumulator,
+                ConduitItemType.ERC721,
+                token,
+                from,
+                to,
+                identifier,
+                amount
+            );
+        }
+    }
+```
+
+##### 5. _insert()
+
+_insert() 方法负责组织调用 conduit 合约方法的 data 数据。
+
+```solidity
+function _insert(
+        bytes32 conduitKey,
+        bytes memory accumulator,
+        ConduitItemType itemType,
+        address token,
+        address from,
+        address to,
+        uint256 identifier,
+        uint256 amount
+    ) internal pure {
+        uint256 elements;
+        // "Arm" and prime accumulator if it's not already armed. The sentinel
+        // value is held in the length of the accumulator array.
+        // 利用 accumulator.length 来充当哨兵值，AccumulatorDisarmed 表示初始化状态
+        if (accumulator.length == AccumulatorDisarmed) {
+            elements = 1;
+            // 从这里可以看出最后调用的是 Conduit 合约的 execute() 方法。
+            bytes4 selector = ConduitInterface.execute.selector;
+            assembly {
+                mstore(accumulator, AccumulatorArmed) // "arm" the accumulator. 修改状态。
+                mstore(add(accumulator, Accumulator_conduitKey_ptr), conduitKey)
+                mstore(add(accumulator, Accumulator_selector_ptr), selector)
+                mstore(
+                    add(accumulator, Accumulator_array_offset_ptr),
+                    Accumulator_array_offset
+                )
+                mstore(add(accumulator, Accumulator_array_length_ptr), elements)
+            }
+        } else {
+            // Otherwise, increase the number of elements by one.
+            assembly {
+                elements := add(
+                    mload(add(accumulator, Accumulator_array_length_ptr)),
+                    1
+                )
+                mstore(add(accumulator, Accumulator_array_length_ptr), elements)
+            }
+        }
+
+        // Insert the item.
+        assembly {
+            let itemPointer := sub(
+                add(accumulator, mul(elements, Conduit_transferItem_size)),
+                Accumulator_itemSizeOffsetDifference
+            )
+            mstore(itemPointer, itemType)
+            mstore(add(itemPointer, Conduit_transferItem_token_ptr), token)
+            mstore(add(itemPointer, Conduit_transferItem_from_ptr), from)
+            mstore(add(itemPointer, Conduit_transferItem_to_ptr), to)
+            mstore(
+                add(itemPointer, Conduit_transferItem_identifier_ptr),
+                identifier
+            )
+            mstore(add(itemPointer, Conduit_transferItem_amount_ptr), amount)
+        }
+    }
+```
+
+##### 6. _trigger()
+
+_trigger() 方法触发 conduitKey 对应的 conduit 的调用，将所有积累的项目转移。转移完成后将 accumulator 状态重置。
+
+```solidity
+// Executor.sol => _trigger()
+
+    function _trigger(bytes32 conduitKey, bytes memory accumulator) internal {
+        // Declare variables for offset in memory & size of calldata to conduit.
+        uint256 callDataOffset;
+        uint256 callDataSize;
+
+        // Call the conduit with all the accumulated transfers.
+        assembly {
+            // Call begins at third word; the first is length or "armed" status,
+            // and the second is the current conduit key.
+            callDataOffset := add(accumulator, TwoWords)
+
+            // 68 + items * 192
+            callDataSize := add(
+                Accumulator_array_offset_ptr,
+                mul(
+                    mload(add(accumulator, Accumulator_array_length_ptr)),
+                    Conduit_transferItem_size
+                )
+            )
+        }
+
+        // Call conduit derived from conduit key & supply accumulated transfers.
+        _callConduitUsingOffsets(conduitKey, callDataOffset, callDataSize);
+
+        // Reset accumulator length to signal that it is now "disarmed".
+        assembly {
+            mstore(accumulator, AccumulatorDisarmed)
+        }
+    }
+
+    function _callConduitUsingOffsets(
+        bytes32 conduitKey,
+        uint256 callDataOffset,
+        uint256 callDataSize
+    ) internal {
+        // Derive the address of the conduit using the conduit key.
+        address conduit = _deriveConduit(conduitKey);
+
+        bool success;
+        bytes4 result;
+
+        // call the conduit.
+        assembly {
+            // Ensure first word of scratch space is empty.
+            mstore(0, 0)
+
+            // Perform call, placing first word of return data in scratch space.
+            success := call(
+                gas(),
+                conduit,
+                0,
+                callDataOffset,
+                callDataSize,
+                0,
+                OneWord
+            )
+
+            // Take value from scratch space and place it on the stack.
+            result := mload(0)
+        }
+
+        // If the call failed...
+        if (!success) {
+            // Pass along whatever revert reason was given by the conduit.
+            _revertWithReasonIfOneIsReturned();
+
+            // Otherwise, revert with a generic error.
+            revert InvalidCallToConduit(conduit);
+        }
+
+        // Ensure result was extracted and matches EIP-1271 magic value.
+        if (result != ConduitInterface.execute.selector) {
+            revert InvalidConduit(conduitKey, conduit);
+        }
+    }
+```
+
+##### 6. 订单成交中涉及 token 转移的逻辑的总结
+
+总结一下在转移 token 的逻辑。
+
+1. 对于没有指定 conduitKey 的 token， 直接进行转移。
+2. 对于指定 conduitKey 的 token，将使用同一个 conduitKey 的 token 相关数据组织成一个调用 Couduit 合约 execute() 方法的 data 数据。
+3. 使用 data 数据调用 Couduit 合约 execute() 方法，来完成 token 的转移。
+
 #### Conduit
 
-Conduit 合约继承自 TokenTransferrer。也就是说 Conduit 合约负责的是 Token 的转移。他里面有各种转移 token 的方法。
+前面铺垫了这么多，我们来看看 Conduit 合约。
 
-其实在订单中如果不使用 Conduit 的话，最终调用的转移 token 的方法就是 TokenTransferrer 合约里的方法。使用 Conduit 的目的就是控制代币的转移。可以通过设置 channel 和 channel 的状态来控制 token 的转移。
+Conduit 合约继承自 TokenTransferrer。也就是说 Conduit 合约负责的是 Token 的转移。里面有各种转移 token 的方法。
+
+其实在订单中如果不使用 Conduit 的话，最终调用的转移 token 的方法就是 TokenTransferrer 合约里的方法。使用 Conduit 的目的就是可以通过设置 channel 和 channel 的状态来控制 token 的转移。
+
+##### 1. onlyOpenChannel
 
 这一切个关键就在于 onlyOpenChannel 这个函数修饰器上。通过它来确保调用者是一个注册在 Conduit 上的 channel， 并且该 channel 是打开的。
 
@@ -682,7 +1069,6 @@ modifier onlyOpenChannel() {
         // 直接访问存储 channel 的 mapping
         assembly {
             // Write the caller to scratch space.
-            // 将 caller 写入
             mstore(ChannelKey_channel_ptr, caller())
 
             // Write the storage slot for _channels to scratch space.
@@ -707,9 +1093,88 @@ modifier onlyOpenChannel() {
         }
 ```
 
-#### 订单成交中涉及的逻辑
+##### 2. execute
+
+execute 方法是用来执行批量 token 转移的。它有 onlyOpenChannel 的函数修饰器。确保该方法的调用者是一个注册在 Conduit 上的 channel， 并且该 channel 是打开的。在成单方法中对于有 conduitKey 的 token 最终调用该方法进行转移。
+
+```solidity
+// Conduit.sol => execute()
+
+ function execute(ConduitTransfer[] calldata transfers)
+        external
+        override
+        onlyOpenChannel
+        returns (bytes4 magicValue)
+    {
+        // Retrieve the total number of transfers and place on the stack.
+        uint256 totalStandardTransfers = transfers.length;
+
+        // Iterate over each transfer.
+        for (uint256 i = 0; i < totalStandardTransfers; ) {
+            // Retrieve the transfer in question and perform the transfer.
+            _transfer(transfers[i]);
+
+            // Skip overflow check as for loop is indexed starting at zero.
+            unchecked {
+                ++i;
+            }
+        }
+
+        // Return a magic value indicating that the transfers were performed.
+        magicValue = this.execute.selector;
+    }
+```
+
+##### 3. _transfer
+
+`_transfer()` 方法跟 Executor 合约中的方法类似。都是根据 token 的类型调用不同的方法。 
+
+这些执行 token 转移的方法就是 TokenTransferrer 合约里实现的方法。跟上面没有指定 conduitKey 的时候的转移方法是一个方法。
+
+```solidity
+// Conduit.sol => _transfer()
+
+function _transfer(ConduitTransfer calldata item) internal {
+        // Determine the transfer method based on the respective item type.
+        if (item.itemType == ConduitItemType.ERC20) {
+            // Transfer ERC20 token. Note that item.identifier is ignored and
+            // therefore ERC20 transfer items are potentially malleable — this
+            // check should be performed by the calling channel if a constraint
+            // on item malleability is desired.
+            _performERC20Transfer(item.token, item.from, item.to, item.amount);
+        } else if (item.itemType == ConduitItemType.ERC721) {
+            // Ensure that exactly one 721 item is being transferred.
+            if (item.amount != 1) {
+                revert InvalidERC721TransferAmount();
+            }
+
+            // Transfer ERC721 token.
+            _performERC721Transfer(
+                item.token,
+                item.from,
+                item.to,
+                item.identifier
+            );
+        } else if (item.itemType == ConduitItemType.ERC1155) {
+            // Transfer ERC1155 token.
+            _performERC1155Transfer(
+                item.token,
+                item.from,
+                item.to,
+                item.identifier,
+                item.amount
+            );
+        } else {
+            // Throw with an error.
+            revert InvalidItemType();
+        }
+    }
+```
 
 
+#### Conduit 总结
+
+总结起来 Conduit 就是提供了一个权限管理的功能，通过设置 conduitKey，来限制代币的转移。只允许注册在 ConduitController 管理的 Conduit 上的 channel 才有权限进行转移 token。这样无疑为创造者、收集者和平台提供了额外的能力。NFT 市场也许会出现一些新的玩法。
 
 ### fulfillBasicOrder
 
@@ -877,9 +1342,11 @@ enum BasicOrderType {
 
 fulfillBasicOrder 方法更像是为了兼容 Wyvern Protocol。
 
-### fulfillOrder
+### fulfillOrder 和 fulfillAdvancedOrder
 
 在测试用例中 fulfillOrder 和 fulfillAdvancedOrder 被称作标准方法（Stand）。也是使用最多的方法。
+
+大部分功能给我们都在上面分析过了，看看他们需要传递的参数就行了。
 
 ```solidity
 function fulfillOrder(
@@ -919,10 +1386,6 @@ function fulfillOrder(
     
     returns (bool fulfilled)
 ```
-
-从上面的 ABI 上，我们可以看出大部分的内容前面都做过解析。只有两个我们现在还不了解。一个是 `conduitKey，` 一个是 `fulfillerConduitKey。` BasicOrder 里面也有类似的 `offererConduitKey` 和 `fulfillerConduitKey。` 他们的作用都是一样的。
-
-### fulfillAdvancedOrder
 
 ```solidity
 function fulfillAdvancedOrder(
@@ -974,7 +1437,13 @@ payable
 returns(bool fulfilled)
 ```
 
-### fulfillAvailableOrders
+### fulfillAvailableOrders 和 fulfillAvailableAdvancedOrders
+
+这两个方法用来批量成交订单，一次性购买多个订单。类似于 gem 这类聚合器起到的作用。
+
+需要注意的参数就是 offerFulfillments 和 considerationFulfillments 这两个。
+
+maximumFulfilled 表示最多要执行多少个订单。因为订单可能因为已取消，或者已经被购买等等原因失效了。这个时候这些失效的订单就会被跳过，执行剩下的订单，直到完成的订单达到 maximumFulfilled 这个数量。
 
 ```solidity
 
@@ -1011,11 +1480,11 @@ function fulfillAvailableOrders(
     offerFulfillments(
         uint256 orderIndex, 
         uint256 itemIndex
-        )[][] , 
+        )[][] , // 所有的提供详情：根据地址划分
     considerationFulfillments(
         uint256 orderIndex, 
         uint256 itemIndex
-        )[][] , 
+        )[][] , // 所有的收取详情：根据地址划分
     bytes32 fulfillerConduitKey, 
     uint256 maximumFulfilled
     ) 
@@ -1037,8 +1506,6 @@ function fulfillAvailableOrders(
             )[] 
         )
 ```
-
-### fulfillAvailableAdvancedOrders
 
 ```solidity
 function fulfillAvailableAdvancedOrders(
@@ -1081,11 +1548,11 @@ function fulfillAvailableAdvancedOrders(
         uint256 identifier,
         bytes32[] criteriaProof
     )[],
-    offerFulfillments( // 所有的提供详情：根据地址划分
+    offerFulfillments( 
         uint256 orderIndex,
         uint256 itemIndex
     )[][],
-    considerationFulfillments( // 所有的收取详情：根据地址划分
+    considerationFulfillments( 
         uint256 orderIndex,
         uint256 itemIndex
     )[][],
@@ -1111,5 +1578,142 @@ returns(
     )
 )
 ```
+
+### matchOrders 和 matchAdvancedOrders
+
+对一组订单（大于等于2个）进行匹配。以这种方式履行的订单没有一个明确的履行者。因此交易成功的事件中 recipient 为空。要想获取到这种成单方式的 recipient。需要根据多个订单综合考虑。
+
+```solidity
+function matchOrders(
+    orders(
+        parameters(
+            address offerer, 
+            address zone, 
+            offer(
+                uint8 itemType, 
+                address token, 
+                uint256 identifierOrCriteria, 
+                uint256 startAmount, 
+                uint256 endAmount
+                )[] , 
+            consideration(
+                uint8 itemType, 
+                address token, 
+                uint256 identifierOrCriteria, 
+                uint256 startAmount, 
+                uint256 endAmount, 
+                address recipient
+                )[] , 
+            uint8 orderType, 
+            uint256 startTime, 
+            uint256 endTime, 
+            bytes32 zoneHash, 
+            uint256 salt, 
+            bytes32 conduitKey, 
+            uint256 totalOriginalConsiderationItems
+            ) , 
+        bytes signature
+        )[] , 
+    fulfillments(
+        offerComponents(
+            uint256 orderIndex, 
+            uint256 itemIndex
+            )[] , 
+        considerationComponents(
+            uint256 orderIndex, 
+            uint256 itemIndex
+            )[] 
+        )[] 
+    ) 
+    
+    payable 
+    
+    returns(
+        executions(
+            item(
+                uint8 itemType, 
+                address token, 
+                uint256 identifier, 
+                uint256 amount, 
+                address recipient
+                ) , 
+            address offerer, 
+            bytes32 conduitKey
+        )[] 
+        )
+
+```
+```solidity
+function matchAdvancedOrders(
+    advancedOrders(
+        parameters(
+            address offerer, 
+            address zone, 
+            offer(
+                uint8 itemType, 
+                address token, 
+                uint256 identifierOrCriteria, 
+                uint256 startAmount,
+                uint256 endAmount
+                )[] , 
+            consideration(
+                uint8 itemType, 
+                address token, 
+                uint256 identifierOrCriteria, 
+                uint256 startAmount, 
+                uint256 endAmount, 
+                address recipient
+                )[] , 
+            uint8 orderType, 
+            uint256 startTime, 
+            uint256 endTime, 
+            bytes32 zoneHash, 
+            uint256 salt, 
+            bytes32 conduitKey, 
+            uint256 totalOriginalConsiderationItems
+            ) , 
+        uint120 numerator, 
+        uint120 denominator, 
+        bytes signature, 
+        bytes extraData
+        )[] , 
+    criteriaResolvers(
+        uint256 orderIndex, 
+        uint8 side, 
+        uint256 index, 
+        uint256 identifier, 
+        bytes32[] criteriaProof
+        )[] , 
+    fulfillments(
+        tuple(
+            uint256 orderIndex, 
+            uint256 itemIndex
+            )[] offerComponents, 
+        tuple(
+            uint256 orderIndex, 
+            uint256 itemIndex
+            )[] considerationComponents
+        )[] 
+    ) 
+    
+    payable 
+    
+    returns 
+    (
+        executions(
+            item(
+                uint8 itemType, 
+                address token, 
+                uint256 identifier, 
+                uint256 amount, 
+                address recipient
+                ) , 
+            address offerer, 
+            bytes32 conduitKey
+            )[] 
+        )
+```
+
+### 
 
 <!-- ![Seaport](Seaport.drawio.svg) -->
