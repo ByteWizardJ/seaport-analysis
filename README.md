@@ -1,5 +1,7 @@
 # Seaport Analysis
 
+![Seaport](Seaport-banner.png)
+
 ## 概述
 
 Seaport 的交易模型跟之前的 Wyvern Protocol 一样,依旧是中央订单簿的交易模型。都是由链下的中心化的订单簿和链上的交易组成。
@@ -470,7 +472,7 @@ order 中的 conduitKey 就与此相关。我们看看具体是怎么实现的�
 
 首先来了解一下 ConduitController 和 Conduit 这两个合约。
 
-![Conduit](Seaport.drawio.svg)
+![Conduit](Seaport.conduit.drawio.svg)
 
 #### ConduitController
 
@@ -2474,10 +2476,13 @@ function matchAdvancedOrders(
 - 根据最初的订单类型，直接使用 conduit 或 Seaport 进行转移。
 - 忽略to == from 或 amount == 0 的 fulfillment
 
+### Seaport 流程图
+
+![Seaport](Seaport.drawio.svg)
+
 ## 参考
 
 1. Seaport Overview: [https://docs.opensea.io/v2.0/reference/seaport-overview](https://docs.opensea.io/v2.0/reference/seaport-overview)
 2. ProjectOpenSea/seaport: [https://github.com/ProjectOpenSea/seaport](https://github.com/ProjectOpenSea/seaport)
 3. Introducing Seaport Protocol: [https://opensea.io/blog/announcements/introducing-seaport-protocol/](https://opensea.io/blog/announcements/introducing-seaport-protocol/)
 4. Opensea悬赏100万美金找bug: [https://www.youtube.com/watch?v=knLGJ2M3f1o](https://www.youtube.com/watch?v=knLGJ2M3f1o)
-<!-- ![Seaport](Seaport.drawio.svg) -->
