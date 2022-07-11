@@ -1624,7 +1624,7 @@ considerationFulfillments 是所有尝试进行成交的 consideration 详情。
 
 现在有三个 ERC721 的订单。第一个订单和第二个订单 offer 中的 ERC721 token 的合约地址相同，但 token id 不同。第三个订单 offer 中的 ERC721 token 的合约地址跟前两个不相同。
 
-```json
+```solidity
 //=============firstOrder
 {
     "parameters": {
@@ -1743,7 +1743,7 @@ considerationFulfillments 是所有尝试进行成交的 consideration 详情。
 
 这种情况下传入的 offerComponents 和 considerationComponents 分别是
 
-```json
+```solidity
 //==========offerFulfillments
 // ERC721 类型的 token 每个都单独归类到一个数组，如果是 ERC1155 的 token 相同地址和 id 的token
 [ 
@@ -1799,7 +1799,7 @@ considerationFulfillments 是所有尝试进行成交的 consideration 详情。
 
 比如上面三个订单全都执行成功，返回如下
 
-```json
+```solidity
 [
   true,
   true,
@@ -1813,7 +1813,7 @@ executions 是最终执行的货币转移的具体信息。
 
 比如上面的订单总共执行了 6 次 token 的转移。
 
-```json
+```solidity
 [
     [
         [
