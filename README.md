@@ -1,4 +1,4 @@
-# Searport Analysis
+# Seaport Analysis
 
 ## 概述
 
@@ -71,7 +71,7 @@ graph TD
 3. Verify，订单的校验
 4. Transferrer，token 的转移
 
-我们下面按照这个顺序来进行分析。
+我们下面会大致按照这个顺序来进行分析。有些内容可能会穿插到一起。
 
 ## Order
 
@@ -1441,10 +1441,6 @@ returns(bool fulfilled)
 
 这两个方法用来批量成交订单，一次性购买多个订单。类似于 gem 这类聚合器起到的作用。
 
-需要注意的参数就是 offerFulfillments 和 considerationFulfillments 这两个。
-
-maximumFulfilled 表示最多要执行多少个订单。因为订单可能因为已取消，或者已经被购买等等原因失效了。这个时候这些失效的订单就会被跳过，执行剩下的订单，直到完成的订单达到 maximumFulfilled 这个数量。
-
 ```solidity
 
 function fulfillAvailableOrders(
@@ -1480,11 +1476,11 @@ function fulfillAvailableOrders(
     offerFulfillments(
         uint256 orderIndex, 
         uint256 itemIndex
-        )[][] , // 所有的提供详情：根据地址划分
+        )[][] , // 所有尝试进行成交的所有 offer 详情
     considerationFulfillments(
         uint256 orderIndex, 
         uint256 itemIndex
-        )[][] , // 所有的收取详情：根据地址划分
+        )[][] , // 所有尝试进行成交的 consideration 详情
     bytes32 fulfillerConduitKey, 
     uint256 maximumFulfilled
     ) 
@@ -1572,16 +1568,365 @@ returns(
             uint256 identifier,
             uint256 amount,
             address recipient
-        )[],
+        ),
         address offerer,
         bytes32 conduitKey
-    )
+    )[]
 )
+```
+
+#### orders
+
+orders 是要进行成交的订单信息。跟上面的 fulfillOrder 方法中一样。
+
+#### maximumFulfilled
+
+maximumFulfilled 表示最多要执行多少个订单。因为订单可能因为已取消，或者已经被购买等等原因失效了。这个时候这些失效的订单就会被跳过，执行剩下的订单，直到完成的订单达到 maximumFulfilled 这个数量。
+
+#### offerFulfillments 和 considerationFulfillments
+
+offerFulfillments 是所有尝试进行成交的所有 offer 详情。
+considerationFulfillments 是所有尝试进行成交的 consideration 详情。
+
+他们都是二维数组的结构。
+
+```solidity
+(
+  uint256 orderIndex, 
+  uint256 itemIndex
+)[][]
+```
+
+##### 外层数组
+
+外层的数组是将满足同意条件的 token 进行归类。
+
+对于所有的 offer 来说满足以下条件的会被归类到一个数组：
+
+1. 提供者相同
+2. token 的合约地址相同
+3. identifierOrCriteria 相同
+4. 操作转移 token 的地址相同，也就是上面提到的 Conduit 的 channel 相同。
+
+对于所有的 offer 来说满足以下条件的会被归类到一个数组：
+
+1. 接收者相同
+2. token 的合约地址相同
+3. identifierOrCriteria 相同
+
+需要注意的是一个 ERC721 类型的 token 会单独归类到一个数组中去。也就是说就算多个 ERC721 的 token 上面的参数相同，也依然会被归类到不同的数组中去。
+
+##### 内层数组
+
+内层的数组表示 token 的具体在哪一个订单里的哪一个位置的 token。
+
+举个例子：
+
+现在有三个 ERC721 的订单。第一个订单和第二个订单 offer 中的 ERC721 token 的合约地址相同，但 token id 不同。第三个订单 offer 中的 ERC721 token 的合约地址跟前两个不相同。
+
+```json
+//=============firstOrder
+{
+    "parameters": {
+        "offerer": "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266",
+        "zone": "0x0000000000000000000000000000000000000000",
+        "zoneHash": "0x3000000000000000000000000000000000000000000000000000000000000000",
+        "startTime": "1657519219",
+        "endTime": "115792089237316195423570985008687907853269984665640564039457584007913129639935",
+        "orderType": 0,
+        "offer": [{
+            "itemType": 2,
+            "token": "0x9fE46736679d2D9a65F0992F2272dE9f3c7fa6e0",
+            "identifierOrCriteria": "1",
+            "startAmount": "1",
+            "endAmount": "1"
+        }],
+        "consideration": [{
+            "itemType": 0,
+            "token": "0x0000000000000000000000000000000000000000",
+            "identifierOrCriteria": "0",
+            "startAmount": "9750000000000000000",
+            "endAmount": "9750000000000000000",
+            "recipient": "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266"
+        }, {
+            "itemType": 0,
+            "token": "0x0000000000000000000000000000000000000000",
+            "identifierOrCriteria": "0",
+            "startAmount": "250000000000000000",
+            "endAmount": "250000000000000000",
+            "recipient": "0x3C44CdDdB6a900fa2b585dd299e03d12FA4293BC"
+        }],
+        "totalOriginalConsiderationItems": 2,
+        "salt": "0x6fb7c4776742796d7ba9fe1a630f1a4c",
+        "conduitKey": "0x0000000000000000000000000000000000000000000000000000000000000000",
+        "counter": 0
+    },
+    "signature": "0x421bcc8050743c99d1d8af480177e65ca5d83abd8c7aff5e51cf68a9095e3651e2b930d29ba9dec0526abc01a1703f2feaaed967bf75521d1bb5cc3da625edc5"
+}
+//=============secondOrder
+{
+    "parameters": {
+        "offerer": "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266",
+        "zone": "0x0000000000000000000000000000000000000000",
+        "zoneHash": "0x3000000000000000000000000000000000000000000000000000000000000000",
+        "startTime": "1657519219",
+        "endTime": "115792089237316195423570985008687907853269984665640564039457584007913129639935",
+        "orderType": 0,
+        "offer": [{
+            "itemType": 2,
+            "token": "0x9fE46736679d2D9a65F0992F2272dE9f3c7fa6e0",
+            "identifierOrCriteria": "2",
+            "startAmount": "1",
+            "endAmount": "1"
+        }],
+        "consideration": [{
+            "itemType": 0,
+            "token": "0x0000000000000000000000000000000000000000",
+            "identifierOrCriteria": "0",
+            "startAmount": "9750000000000000000",
+            "endAmount": "9750000000000000000",
+            "recipient": "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266"
+        }, {
+            "itemType": 0,
+            "token": "0x0000000000000000000000000000000000000000",
+            "identifierOrCriteria": "0",
+            "startAmount": "250000000000000000",
+            "endAmount": "250000000000000000",
+            "recipient": "0x3C44CdDdB6a900fa2b585dd299e03d12FA4293BC"
+        }],
+        "totalOriginalConsiderationItems": 2,
+        "salt": "0xce67e28590d7932188406e545107101c",
+        "conduitKey": "0x0000000000000000000000000000000000000000000000000000000000000000",
+        "counter": 0
+    },
+    "signature": "0xab6f9e873db8181d96204868f342984e3e33f8ff1c923e367c71447d07c9b902f33e053cdcb7bee17f5bdc3e63f9bb2d4de1c18fe503cdafb38ac07a6fa83d21"
+}
+//=============thirdOrder
+{
+    "parameters": {
+        "offerer": "0x70997970C51812dc3A010C7d01b50e0d17dc79C8",
+        "zone": "0x0000000000000000000000000000000000000000",
+        "zoneHash": "0x3000000000000000000000000000000000000000000000000000000000000000",
+        "startTime": "1657519219",
+        "endTime": "115792089237316195423570985008687907853269984665640564039457584007913129639935",
+        "orderType": 0,
+        "offer": [{
+            "itemType": 2,
+            "token": "0x0165878A594ca255338adfa4d48449f69242Eb8F",
+            "identifierOrCriteria": "1",
+            "startAmount": "1",
+            "endAmount": "1"
+        }],
+        "consideration": [{
+            "itemType": 0,
+            "token": "0x0000000000000000000000000000000000000000",
+            "identifierOrCriteria": "0",
+            "startAmount": "9750000000000000000",
+            "endAmount": "9750000000000000000",
+            "recipient": "0x70997970C51812dc3A010C7d01b50e0d17dc79C8"
+        }, {
+            "itemType": 0,
+            "token": "0x0000000000000000000000000000000000000000",
+            "identifierOrCriteria": "0",
+            "startAmount": "250000000000000000",
+            "endAmount": "250000000000000000",
+            "recipient": "0x3C44CdDdB6a900fa2b585dd299e03d12FA4293BC"
+        }],
+        "totalOriginalConsiderationItems": 2,
+        "salt": "0x05528b16957ba28bad1482008ff4022a",
+        "conduitKey": "0x0000000000000000000000000000000000000000000000000000000000000000",
+        "counter": 0
+    },
+    "signature": "0x76dc309eddbc068ccd322c2d97f181c0559f9788a787e2578f31ca9bffcb2e9ba64bce8b3247402a30af3700963271d1b8cd4dc990f6536e449f95712c68f1df"
+}
+```
+
+这种情况下传入的 offerComponents 和 considerationComponents 分别是
+
+```json
+//==========offerFulfillments
+// ERC721 类型的 token 每个都单独归类到一个数组，如果是 ERC1155 的 token 相同地址和 id 的token
+[ 
+    // 第1个订单中第1个 offer 的 ERC721 代币
+    [{
+        "orderIndex": 0,
+        "itemIndex": 0
+    }],
+    // 第2个订单中第1个 offer 的 ERC721 代币
+    [{
+        "orderIndex": 1,
+        "itemIndex": 0
+    }],
+    // 第3个订单中第1个 offer 的 ERC721 代币
+    [{
+        "orderIndex": 2,
+        "itemIndex": 0
+    }]
+]
+//==========considerationFulfillments
+// 
+[
+    // 0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266 接收的 ETH 在 consideration 的位置
+    [{
+        "orderIndex": 0,
+        "itemIndex": 0
+    }, {
+        "orderIndex": 1,
+        "itemIndex": 0
+    }],
+    // 0x3C44CdDdB6a900fa2b585dd299e03d12FA4293BC 接收的 ETH 在 consideration 的位置
+    [{
+        "orderIndex": 0,
+        "itemIndex": 1
+    }, {
+        "orderIndex": 1,
+        "itemIndex": 1
+    }, {
+        "orderIndex": 2,
+        "itemIndex": 1
+    }],
+    // 0x70997970C51812dc3A010C7d01b50e0d17dc79C8 接收的 ETH 在 consideration 的位置
+    [{
+        "orderIndex": 2,
+        "itemIndex": 0
+    }]
+]
+```
+
+#### 返回值 availableOrders
+
+返回订单是否成功执行。
+
+比如上面三个订单全都执行成功，返回如下
+
+```json
+[
+  true,
+  true,
+  true
+]
+```
+
+#### 返回值 executions
+
+executions 是最终执行的货币转移的具体信息。
+
+比如上面的订单总共执行了 6 次 token 的转移。
+
+```json
+[
+    [
+        [
+            2,
+            "0x9fE46736679d2D9a65F0992F2272dE9f3c7fa6e0",
+            {
+                "type": "BigNumber",
+                "hex": "0x01"
+            },
+            {
+                "type": "BigNumber",
+                "hex": "0x01"
+            },
+            "0x90F79bf6EB2c4f870365E785982E1f101E93b906"
+        ],
+        "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266",
+        "0x0000000000000000000000000000000000000000000000000000000000000000"
+    ],
+    [
+        [
+            2,
+            "0x9fE46736679d2D9a65F0992F2272dE9f3c7fa6e0",
+            {
+                "type": "BigNumber",
+                "hex": "0x02"
+            },
+            {
+                "type": "BigNumber",
+                "hex": "0x01"
+            },
+            "0x90F79bf6EB2c4f870365E785982E1f101E93b906"
+        ],
+        "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266",
+        "0x0000000000000000000000000000000000000000000000000000000000000000"
+    ],
+    [
+        [
+            2,
+            "0x0165878A594ca255338adfa4d48449f69242Eb8F",
+            {
+                "type": "BigNumber",
+                "hex": "0x01"
+            },
+            {
+                "type": "BigNumber",
+                "hex": "0x01"
+            },
+            "0x90F79bf6EB2c4f870365E785982E1f101E93b906"
+        ],
+        "0x70997970C51812dc3A010C7d01b50e0d17dc79C8",
+        "0x0000000000000000000000000000000000000000000000000000000000000000"
+    ],
+    [
+        [
+            0,
+            "0x0000000000000000000000000000000000000000",
+            {
+                "type": "BigNumber",
+                "hex": "0x00"
+            },
+            {
+                "type": "BigNumber",
+                "hex": "0x010e9deaaf401e0000"
+            },
+            "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266"
+        ],
+        "0x90F79bf6EB2c4f870365E785982E1f101E93b906",
+        "0x0000000000000000000000000000000000000000000000000000000000000000"
+    ],
+    [
+        [
+            0,
+            "0x0000000000000000000000000000000000000000",
+            {
+                "type": "BigNumber",
+                "hex": "0x00"
+            },
+            {
+                "type": "BigNumber",
+                "hex": "0x0a688906bd8b0000"
+            },
+            "0x3C44CdDdB6a900fa2b585dd299e03d12FA4293BC"
+        ],
+        "0x90F79bf6EB2c4f870365E785982E1f101E93b906",
+        "0x0000000000000000000000000000000000000000000000000000000000000000"
+    ],
+    [
+        [
+            0,
+            "0x0000000000000000000000000000000000000000",
+            {
+                "type": "BigNumber",
+                "hex": "0x00"
+            },
+            {
+                "type": "BigNumber",
+                "hex": "0x874ef557a00f0000"
+            },
+            "0x70997970C51812dc3A010C7d01b50e0d17dc79C8"
+        ],
+        "0x90F79bf6EB2c4f870365E785982E1f101E93b906",
+        "0x0000000000000000000000000000000000000000000000000000000000000000"
+    ]
+]
 ```
 
 ### matchOrders 和 matchAdvancedOrders
 
 对一组订单（大于等于2个）进行匹配。以这种方式履行的订单没有一个明确的履行者。因此交易成功的事件中 recipient 为空。要想获取到这种成单方式的 recipient。需要根据多个订单综合考虑。
+
+fulfillments 这个参数跟就是对订单进行撮合后最终 token 的提供者和接收者。
+
+返回值 executions 跟 fulfillAvailableOrders 中的一样。
 
 ```solidity
 function matchOrders(
@@ -1643,6 +1988,7 @@ function matchOrders(
         )
 
 ```
+
 ```solidity
 function matchAdvancedOrders(
     advancedOrders(
@@ -1714,6 +2060,57 @@ function matchAdvancedOrders(
         )
 ```
 
-### 
+## 订单成交的流程
 
+### 当通过 fulfillOrder 或 fulfillAdvancedOrder 完成一个订单时
+
+1. Hash order
+  - 为 offer 项目和 consideration 项目导出哈希值
+  - 检索 offerer 的当前计数器
+  - 推导订单的哈希值
+2. 执行初始验证
+  - 确保当前时间是在订单范围内
+  - 确保订单类型的有效调用者；如果订单类型是限制性的，并且调用者不是 offer 或 Zone，则调用 Zone 的校验方法以确定订单是否有效。
+3. 检索并更新订单状态
+  - 确保订单没有被取消
+  - 确保订单没有被完全填充
+    - 如果订单被部分填充，必要时减少所提供的填充量，使订单不被过度填充。
+  - 如果尚未验证，则验证订单签名
+  - 根据偏好+可用金额，确定要填充的部分
+  - 更新订单状态（已验证+填充部分）。
+4. 确定每个项目的金额
+  - 比较 startAmount 和 endAmount
+    - 如果它们相等：项目的金额就是其中的一个，如果是部分填充，项目的金额就是其乘以一定比率后的结果。
+    - 如果不相等：根据当前区块的时间开确认当前的项目金额。
+5. 应用标准解析器（criteria resolvers）
+  - 确保每个标准解析器都指向一个基于标准的订单项目
+  - 如果项目有一个非零的 criteria root，确保为每个项目提供的标识符通过包含证明是有效的
+  - 更新每个项目的类型和标识符
+  - 确保所有剩余的项目都不是基于标准的
+6. 发出OrderFulfilled事件
+  - 包括更新的信息（比如每个项目的金额和经过解析后的项目的 token id）。
+7. 将 offer 项目从 offerer 转移到调用者
+  - 根据订单类型，直接使用 conduit 或 Seaport 来进行转移。
+8. 将 consideration 项目从调用者转移到各自的接受者
+  - 根据调用者的声明，使用 conduit 或 Seaport 来进行转移。
+
+### Match Orders
+
+当通过 matchOrders 或 matchAdvancedOrders 匹配一组订单时，步骤1到6几乎是相同的，但从对每个提供的订单进行执行这里开始，实现方式与标准的履行方式不同了。
+
+7. 执行交易
+  - 确保每个 fulfillment 指的是一个或多个 offer 项目和一个或多个 consideration 项目，他们都具有相同的类型和 id ，并且每个 offer 项目具有相同的批准来源，每个 consideration 项目具有相同的接收者
+  - 将每个 offer 项目和每个 consideration 项目的数量减少到零，并跟踪每个项目减少的总金额
+  - 比较每个项目的总金额，并将剩余的金额加到订单相应一侧的第一个项目上。
+  - 为每项 fulfillment 返回一个单一的执行结果
+8. 扫描每个 consideration 项目，确保没有一个项目的剩余金额为零
+9. 进行转账
+  - 根据最初的订单类型，直接使用 conduit 或 Seaport 进行转移。
+  - 忽略to == from 或 amount == 0 的 fulfillment
+
+## 参考
+1. Seaport Overview: [https://docs.opensea.io/v2.0/reference/seaport-overview](https://docs.opensea.io/v2.0/reference/seaport-overview)
+2. ProjectOpenSea/seaport: [https://github.com/ProjectOpenSea/seaport](https://github.com/ProjectOpenSea/seaport)
+3. Introducing Seaport Protocol: [https://opensea.io/blog/announcements/introducing-seaport-protocol/](https://opensea.io/blog/announcements/introducing-seaport-protocol/)
+4. Opensea悬赏100万美金找bug: [https://www.youtube.com/watch?v=knLGJ2M3f1o](https://www.youtube.com/watch?v=knLGJ2M3f1o)
 <!-- ![Seaport](Seaport.drawio.svg) -->
