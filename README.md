@@ -66,9 +66,14 @@
       - [fulfillments](#fulfillments)
       - [返回值 executions](#返回值-executions-1)
   - [订单成交的流程](#订单成交的流程)
+    - [Seaport 流程图](#seaport-流程图)
     - [当通过 fulfillOrder 或 fulfillAdvancedOrder 完成一个订单时](#当通过-fulfillorder-或-fulfilladvancedorder-完成一个订单时)
     - [Match Orders](#match-orders)
-    - [Seaport 流程图](#seaport-流程图)
+  - [总结](#总结)
+    - [1. zone 和 受限制订单（Restricted order）](#1-zone-和-受限制订单restricted-order)
+    - [2. 部分填充（Partial fills）](#2-部分填充partial-fills)
+    - [3.基于标准的订单（Criteria-based orders）](#3基于标准的订单criteria-based-orders)
+    - [4. 管道（Conduit）和通道（Channel）](#4-管道conduit和通道channel)
   - [参考](#参考)
 
 ## 概述
@@ -321,7 +326,7 @@ zone 是可选的辅助帐户，一般情况下是一个合约。
 
 具有两个附加权限：
 
-1. zone 可以通过调用 `cancel` 来取消其命名为 zone 的订单。（请注意，offerer 也可以取消自己的订单，可以单独取消，也可以通过调用 `incrementCounter` 立即取消与当前计数器签署的所有订单）。
+1. zone 可以通过调用 `cancel` 来取消对应的的订单。（注意，offerer 也可以取消自己的订单，可以单独取消，也可以通过调用 `incrementCounter` 立即取消与当前计数器签署的所有订单）。
 2. `RESTRICTED` 类型的订单必须由 zone 或 offerer 执行，或者调用 zone 的 `isValidOrder`或 `isValidOrderIncludingExtraData` 方法来查看返回的 magic value。这个 magic value 表示订单是否已被批准。
 
 简单来说 zone 是在成单前做额外校验的，并且可以取消 offerer 的 listing。offerer 可以利用 zone 来做一些交易过滤相关的操作。
@@ -2548,6 +2553,26 @@ function matchAdvancedOrders(
 
 - 根据最初的订单类型，直接使用 conduit 或 Seaport 进行转移。
 - 忽略to == from 或 amount == 0 的 fulfillment
+
+## 总结
+
+总结上面的逻辑，有几个关键的概念需要理解。
+
+### 1. zone 和 受限制订单（Restricted order）
+
+`RESTRICTED` 类型的订单必须由 zone 或 offerer 执行，或者调用 zone 的 `isValidOrder`或 `isValidOrderIncludingExtraData` 方法来查看返回的 magic value。这个 magic value 表示订单是否已被批准。
+
+### 2. 部分填充（Partial fills）
+
+Advanced 类型的成交方式中可以通过 numerator（分子）和 denominator（分母）两个参数来决定 PARTIAL 类型的订单最终成交的个数。这样就实现了部分填充订单。
+
+### 3.基于标准的订单（Criteria-based orders）
+
+卖家在挂出订单的时候可以选择挂出基于标准的订单。也就是说用户可以将一系列的 token id 的集合设置为标准。当买家购买的具体某个 NFT 的 token id 包含在标准之中，就可以批准成单。
+
+### 4. 管道（Conduit）和通道（Channel）
+
+Conduit 就提供了一个权限管理的功能，通过设置 conduitKey，来限制代币的转移。只允许注册在 ConduitController 管理的 Conduit 上的 channel 才有权限进行转移 token。
 
 ## 参考
 
