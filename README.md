@@ -2574,6 +2574,10 @@ Advanced 类型的成交方式中可以通过 `numerator`（分子）和 `denomi
 
 Conduit 就提供了一个权限管理的功能，通过设置 `conduitKey`，来限制代币的转移。只允许注册在 ConduitController 管理的 Conduit 上的 channel 才有权限进行转移 token。
 
+说在最后。
+
+通过梳理 Seaport 的逻辑我们可以看出，相较于 Wyvern Protocol，Seaport 提供了更多的权限控制的功能，以及聚合交易，多币种交易的功能。这些功能有些能通过当前的前端界面来完成，但是大部分的功能是目前前端界面不能支持的。比如聚合交易，部分填充，基于标准的订单等等。因此 Opensea 的新的前端界面也许正在开发之中，很快将会与我们见面。到时候的这些功能也许会给 NFT 交易市场带来更多的惊喜。拭目以待了。
+
 ## 参考
 
 1. Seaport Overview: [https://docs.opensea.io/v2.0/reference/seaport-overview](https://docs.opensea.io/v2.0/reference/seaport-overview)
