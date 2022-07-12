@@ -28,7 +28,7 @@
     - [Advanced](#advanced)
       - [1. 部分填充（Partial fills）](#1-部分填充partial-fills)
       - [2. 基于标准的订单（Criteria-based orders）](#2-基于标准的订单criteria-based-orders)
-      - [3. 受限订单和额外数据（restricted order and extra data）](#3-受限订单和额外数据restricted-order-and-extra-data)
+      - [3. 受限订单和额外数据（Restricted order and Extra data）](#3-受限订单和额外数据restricted-order-and-extra-data)
       - [4. 可以指定 recipient](#4-可以指定-recipient)
     - [Conduit（管道）](#conduit管道)
       - [ConduitController 和 Conduit](#conduitcontroller-和-conduit)
@@ -98,7 +98,7 @@ Seaport 的交易模型跟之前的 Wyvern Protocol 一样,依旧是中央订单
 1. 支持批量购买，批量卖出。
 2. 支持不同币种来购买。
 3. 支持混合支付，比如订单可以设置成以一些 ERC20 代币加上某些 ERC721 代币来支付。主要目的是去除不同币种相互转换带来的损耗，进一步降低用户的额外费用。
-4. 使用内联汇编来降低 gas 消耗，目前测试来看是 134000左右（单个）
+4. 使用大量的内联汇编来降低 gas 消耗，目前测试来看是 134000左右（单个）
 
 我们可以看出 Seaport Protocol 最重要的目的就是降低用户的 gas 消耗并且降低购买流程的复杂度。
 
@@ -138,7 +138,7 @@ graph TD
     end
 ```
 
-上图是官方给出的结构解析图。
+上图是官方给出的简化的流程图。
 
 大致可以分为以下几个部分：
 
@@ -151,7 +151,7 @@ graph TD
 
 ## Order
 
-这里先分析 order 的数据结构，一些功能的具体实现后面再详细叙述。
+这里先分析 `order` 的数据结构，一些功能的具体实现后面再详细叙述。
 
 ![Seaport](Seaport.order.drawio.svg)
 
@@ -161,13 +161,13 @@ graph TD
 
 也就是说 Seaport 中没有明确的买家和卖家的概念了。
 
-1. 当 offer 是 ERC721/ERC1155 的时候，offerer 就是卖家，卖出 ERC721/ERC1155 来换取 ETH/ERC20。
-2. 当 offer 是 ETH/ERC20 的时候，offerer 就是买家，买入 ERC721/ERC1155，支付 ETH/ERC20。
-3. 当 offer 和 consideration 都是 是 ERC721/ERC1155 的时候就是 NFT 的互换了，这种情况下就无所谓买家和卖家了。
+1. 当 `offer` 是 ERC721/ERC1155 的时候，`offerer` 就是卖家，卖出 ERC721/ERC1155 来换取 ETH/ERC20。
+2. 当 `offer` 是 ETH/ERC20 的时候，`offerer` 就是买家，买入 ERC721/ERC1155，支付 ETH/ERC20。
+3. 当 `offer` 和 `consideration` 都是 是 ERC721/ERC1155 的时候就是 NFT 的互换了，这种情况下就无所谓买家和卖家了。
 
 需要注意的是 **ETH/ERC20 在 Seaport 中充当的是货币（currency），ERC721/ERC1155 充当的是商品。** 这一点很重要。
 
-还有一点需要注意的是 order 中 offer 和 consideration 都是数组类型。数组的元素个数可以是 0 。也就是说 订单中 offer 或者 consideration 中的一个可以是空的。
+还有一点需要注意的是 `order` 中 `offer` 和 `consideration` 都是数组类型。数组的元素个数可以是任意数量的。也就是说 订单中 `offer` 或者 `consideration` 中的一个可以是空的。
 
 ```solidity
 // ConsiderationStructs.sol => OfferItem
@@ -216,15 +216,15 @@ enum ItemType {
 }
 ```
 
-需要注意的是 ERC721_WITH_CRITERIA 和 ERC1155_WITH_CRITERIA。表示基于标准的 ERC721/ERC1155。
+需要注意的是 `ERC721_WITH_CRITERIA` 和 `ERC1155_WITH_CRITERIA`。表示基于标准的 ERC721/ERC1155。
 
-配合 identifierOrCriteria 可以用来表示一个标准，代表一个或者多个 NFT的集合。
+配合 `identifierOrCriteria` 可以用来表示一个标准，代表一个或者多个 NFT 的集合。
 
 还有一点需要注意的是在 `OrderFulfilled` 事件中 `ERC721_WITH_CRITERIA` 和 `ERC1155_WITH_CRITERIA` 类型的元素会被转换为对应的 `ERC721` 和 `ERC1155` 类型。
 
 #### 2) token
 
-token 的合约地址，空地址表示原生代币。
+具体 token 的合约地址，空地址表示原生代币。
 
 #### 3) identifierOrCriteria
 
@@ -232,11 +232,11 @@ token 的合约地址，空地址表示原生代币。
 
 对于 ERC721/ERC1155 类型的项目，表示 token id。
 
-对于 ERC721_WITH_CRITERIA/ERC1155_WITH_CRITERIA 类型的项目， 该值表示的是一个 merkle tree 的 root 值。这个 merkle tree 由一个指定的 token id 集合来生成。
+对于 ERC721_WITH_CRITERIA/ERC1155_WITH_CRITERIA 类型的项目， 该值表示的是一个 merkle tree 的 root 值。这个 merkle tree 由指定的 token id 集合来生成。
 
-简单来说就是卖家拥有一个 collection 的多个 NFT。这时候他就可以提供一个 offer，这个 offer 里的 identifierOrCriteria 是通过他所拥有的 NFT 对应的 token id 组成的集合生成的。这样这个 offer 就包含了他拥有的所有 NFT 对应的 token id 的信息。买家在交易的时候可以选择某一个 token id 的 NFT 进行交易，如果验证通过就能进行成交。具体实现过程后面再详细说明。
+简单来说就是卖家拥有一个 collection 的多个 NFT。这时候他就可以提供一个 `offer`，这个 `offer` 里的 `identifierOrCriteria` 是通过他所拥有的 NFT 对应的 token id 组成的集合生成的。这样这个 `offer` 就包含了他拥有的所有 NFT 对应的 token id 的信息。买家在交易的时候可以选择某一个 token id 的 NFT 进行交易，如果验证通过就能进行成交。具体实现过程后面再详细说明。
 
-identifierOrCriteria 可以为 0，表示买家提供该 collection 下所有 NFT 的 offer。买家在成交的时候可以选择该 collection 下 offerer 拥有的任意 NFT。
+`identifierOrCriteria` 可以为 0，表示买家提供该 collection 下所有 NFT 的 offer。买家在成交的时候可以选择该 collection 下 `offerer` 所拥有的任意 NFT。
 
 需要注意的是，这个特性在 Opensea 目前的前端界面中还不支持。
 
@@ -261,17 +261,17 @@ remaining = duration - elapsed;
 
 #### 5) recipient
 
-consideration 需要指明 recipient。代表 token 的接收地址。
+`consideration` 需要指明 `recipient`。代表 token 的接收者地址。
 
 ### 2. offerer
 
-order 里的 offer 的提供者。
+`order` 里的 `offer` 的提供者。
 
-需要注意的是，订单要是想要成交或者说想要转移 offerer 提供的 offer，必须是下面三个情况中的一个。
+需要注意的是，订单要是想要成交或者说想要转移 `offerer` 提供的 `offer`，必须是下面三个情况中的一个。
 
-1. msg.sender == offerer，也就是 offerer 自己操作
-2. 通过签名进行授权，标准的 65-byte EDCSA, 64-byte EIP-2098, 或者通过 EIP-1271 isValidSignature 的校验。大部分情况下是这种。
-3. offerer 通过调用 validate() 进行链上挂单的。这种情况下订单成交的时候可以跳过签名的校验。
+1. `msg.sender == offerer`，也就是 `offerer` 自己操作
+2. 通过签名进行授权，标准的 65-byte EDCSA, 64-byte EIP-2098, 或者通过 EIP-1271 `isValidSignature()` 的校验。大部分情况下是这种。
+3. offerer 通过调用 `validate()` 进行链上挂单的。这种情况下订单成交的时候可以跳过签名的校验。
 
 ```solidity
 // Consideration.sol => validate()
@@ -288,7 +288,7 @@ function validate(Order[] calldata orders)
 
 ### 3. startTime 和 endTime
 
-订单的开始和结束时间。还可以配合 offer 或者 consideration 的 startAmount/endAmount 来确定拍卖的价格。
+订单的开始和结束时间。还可以配合 `offer` 或者 `consideration` 的 `startAmount`/`endAmount` 来确定拍卖的价格。
 
 ### 4. orderType
 
@@ -300,7 +300,7 @@ function validate(Order[] calldata orders)
 
 #### 2) OPEN 和 RESTRICTED
 
-`OPEN` 表示执行订单的调用可以由任何帐户提交，而 `RESTRICTED` 是限制性的订单，要求由 offerer 或订单 zone 执行订单，或者调用 zone 的 `isValidOrder`或 `isValidOrderIncludingExtraData` 方法来查看返回的 magic value。这个 magic value 表示订单是否已被批准。
+`OPEN` 表示执行订单的调用可以由任何帐户提交，而 `RESTRICTED` 是限制性的订单，要求由 `offerer` 或订单 `zone` 执行订单，或者调用 zone 的 `isValidOrder()`或 `isValidOrderIncludingExtraData()` 方法来查看返回的 magic value。这个 magic value 表示订单是否已被批准。
 
 ```solidity
 // ConsiderationEnums.sol => OrderType
@@ -326,30 +326,30 @@ zone 是可选的辅助帐户，一般情况下是一个合约。
 
 具有两个附加权限：
 
-1. zone 可以通过调用 `cancel` 来取消对应的的订单。（注意，offerer 也可以取消自己的订单，可以单独取消，也可以通过调用 `incrementCounter` 立即取消与当前计数器签署的所有订单）。
-2. `RESTRICTED` 类型的订单必须由 zone 或 offerer 执行，或者调用 zone 的 `isValidOrder`或 `isValidOrderIncludingExtraData` 方法来查看返回的 magic value。这个 magic value 表示订单是否已被批准。
+1. `zone` 可以通过调用 `cancel()` 来取消对应的的订单。（注意，`offerer` 也可以取消自己的订单，可以单独取消，也可以通过调用 `incrementCounter()` 立即取消与当前计数器签署的所有订单）。
+2. `RESTRICTED` 类型的订单必须由 `zone` 或 `offerer` 执行，或者调用 `zone` 的 `isValidOrder()`或 `isValidOrderIncludingExtraData()` 方法来查看返回的 magic value。这个 magic value 表示订单是否已被批准。
 
-简单来说 zone 是在成单前做额外校验的，并且可以取消 offerer 的 listing。offerer 可以利用 zone 来做一些交易过滤相关的操作。
+简单来说 `zone` 是在成单前做额外校验的，并且可以取消 `offerer` 的 listing。`offerer` 可以利用 `zone` 来做一些交易过滤相关的操作。
 
 ### 6. zoneHash
 
-zoneHash 代表一个任意的 32 字节的值，在履行限制性订单时，该值将被提供给 zone ，zone 在决定是否授权该订单时可以利用该值。
+`zoneHash` 代表一个任意的 32 字节的值，在履行限制性订单时，该值将被提供给 `zone` ，`zone` 在决定是否授权该订单时可以利用该值。
 
 ### 7. conduitKey
 
-conduitKey 是一个 bytes32 的值，表示在执行代币转移时，应该利用什么 conduit（渠道） 作为代币批准的来源。默认情况下（即当 conduitKey 被设置为0时），offerer 将直接向 Seaport 授权 ERC20、ERC721和ERC1155代币，这样它就可以在执行期间执行订单指定的转移。相反，offerer 将代币批准给对应的 conduit，然后 Seaport 将指示该 conduit 转移各自的代币。
+`conduitKey` 是一个 bytes32 的值，表示在执行代币转移时，应该利用什么 conduit（渠道） 作为代币批准的来源。默认情况下（即当 `conduitKey` 被设置为0时），`offerer` 将直接向 Seaport 授权 ERC20、ERC721和ERC1155代币，这样它就可以在执行期间执行订单指定的转移。相反，`offerer` 将代币批准给对应的 `conduit`，然后 Seaport 将指示该 `conduit` 转移各自的代币。
 
-conduitKey 跟 conduit 是密切关联的。项目方，拥有者或者平台可以通过 conduit 来管理 nft 的交易。提供了更大的灵活性。
+`conduitKey` 跟 `conduit` 是密切关联的。项目方，拥有者或者平台可以通过 `conduit` 来管理 NFT 的交易。提供了更大的灵活性。
 
 ### 8. counter
 
-计数器，要与 offerer 的计数器相同。
+计数器，要与 `offerer` 的计数器相同。
 
-offerer 可以通过调用 `incrementCounter()` 立即取消与当前计数器签署的所有订单。
+`offerer` 可以通过调用 `incrementCounter()` 立即取消与当前计数器签署的所有订单。
 
 ## Order Fulfillment
 
-在 Wyvern Protocol 中所有的订单都是通过 `orderMatch` 方法来最终成交的。Seaport 与之不同，提供了 7 个方法来执行交易。
+在 Wyvern Protocol 中所有的订单都是通过 `orderMatch()` 方法来最终成交的。Seaport 与之不同，提供了 7 个方法来执行交易。
 
 这些方法可以分为两类：
 
@@ -363,7 +363,7 @@ offerer 可以通过调用 `incrementCounter()` 立即取消与当前计数器�
 4. fulfillAvailableOrders               => 0xed98a574
 5. fulfillAvailableAdvancedOrders       => 0x87201b41
 
-调用这些方法的时候，第二个隐含订单将被构建，调用者为 offerer，将要履行的订单的 offer 为 consideration，将要履行订单的 consideration 为 offer。将要履行订单的 offer 项目将从订单的 offerer 转移到履行者，然后所有 consideration 项目将从履行者转移到指定的接受者。
+调用这些方法的时候，第二个隐含订单将被构建，调用者为 `offerer`，将要履行的订单的 `offer` 为 `consideration`，将要履行订单的 `consideration` 为 `offer`。将要履行订单的 `offer` 项目将从订单的 `offerer` 转移到履行者，然后所有 `consideration` 项目将从履行者转移到指定的接受者。
 
 目前大部分成交都调用的这些方法。
 
@@ -397,21 +397,21 @@ Advanced 分两个维度
 
 #### 1. 部分填充（Partial fills）
 
-上面我们了解到 orderType 中有 FULL 和 PARTIAL 的分别。 FULL 表示完全填充，也就是买方必须购买全部的 offer。 PARTIAL 则表示允许买方购买部分的 offer。
+上面我们了解到 `orderType` 中有 FULL 和 PARTIAL 的分别。 FULL 表示完全填充，也就是买方必须购买全部的 `offer`。 PARTIAL 则表示允许买方购买部分的 `offer`。
 
-因此在使用部分填充的时候 orderType 必须是 1 或者 3。
+因此在使用部分填充的时候 `orderType` 必须是 1 或者 3。
 
-AdvancedOrder 相较于 Order 多了 numerator（分子）和 denominator（分母）两个参数。通过他们计算出来一个比率，这个比率就是买方希望获取数量占 offer 总数量的比率。分子、分母都是 1 则表示要全部购买。（其实在 Advanced 的方法中 Order 都会被转化为 AdvancedOrder，分子、分母都是 1）
+AdvancedOrder 相较于 Order 多了 `numerator`（分子）和 `denominator`（分母）两个参数。通过他们计算出来一个比率，这个比率就是买方希望获取数量占 `offer` 总数量的比率。分子、分母都是 1 则表示要全部购买。（其实在 Advanced 的方法中 Order 都会被转化为 AdvancedOrder，分子、分母都是 1）
 
-一个 PARTIAL 类型的 offer 支持多次部分填充。也就是说如果一次交易没有完全卖出，订单还是有效的。后续还可以进行购买。
+一个 PARTIAL 类型的 `offer` 支持多次部分填充。也就是说如果一次交易没有完全卖出，订单还是有效的。后续还可以进行购买。
 
 有几点需要注意：
 
-1. 部分填充的比率是原订单 offer 数量为基准的。
-   1. 比如说 offer 中有 10 个。
+1. 部分填充的比率是原订单 `offer` 数量为基准的。
+   1. 比如说 `offer` 中有 10 个。
    2. 第一次成交 3/10，还剩余 7 个。
    3. 第二次成交 1/2 ，买方获得的数量是 `1 / 2 * 10 = 5`。
-2. 如果总数量是 amount，那么 `amount * (numerator / denominator)` 必须是个整数，否则会报 `InexactFraction` 的错误。
+2. 如果总数量是 `amount`，那么 `amount * (numerator / denominator)` 必须是个整数，否则会报 `InexactFraction` 的错误。
 3. 如果买方想要获取的比率乘以总数量大于剩余数量的话将会获取剩余的全部。
 4. 如果 numerator > denominator 或者 numerator == 0，会报 `BadFraction` 的错误。
 
@@ -425,11 +425,11 @@ AdvancedOrder 相较于 Order 多了 numerator（分子）和 denominator（分�
 
 我们通过一个例子来具体说明实现过程。
 
-1. 首先一个 offerer 拥有某个 collection 的三个 ERC721 token。tokend id 分别是 1、2、6。
+1. 首先一个 `offerer` 拥有某个 collection 的三个 ERC721 token。tokend id 分别是 1、2、6。
 
-2. offerer 挂出他的 token。挂单的时候要生成一个 Merkle Tree。Data1 = 1， Data1 = 2， Data1 = 6。最终得到 Root 的值。然后生成订单信息，offer 的 `identifierOrCriteria` = `Root`。
+2. `offerer` 挂出他的 token。挂单的时候要生成一个 Merkle Tree。Data1 = 1， Data1 = 2， Data1 = 6。最终得到 Root 的值。然后生成订单信息，`offer` 的 `identifierOrCriteria` = `Root`。
 3. 某个买家想要购买 tokend id 为 1 的 token。需要调用 Advanced 方法。
-4. Advanced 方法需要传入 criteriaResolvers 参数。具体类型如下
+4. Advanced 方法需要传入 `criteriaResolvers` 参数。具体类型如下
 
 ```solidity
 // ConsiderationStructs.sol => CriteriaResolver
@@ -443,7 +443,7 @@ struct CriteriaResolver {
 }
 ```
 
-5. 执行订单的时候要先进行证明，证明买家要买的 token 包含在 offerer 的 offer 之中。
+5. 执行订单的时候要先进行证明，证明买家要买的 token 包含在 `offerer` 的 `offer` 之中。
 
 ```solidity
 // CriteriaResolution.sol => _verifyProof()
@@ -469,11 +469,11 @@ struct CriteriaResolver {
     // 4. 如果 Root == root 就说明通过了证明
 ```
 
-6. 将 offerer 对应 token id 的 token 转移给买家，完成交易。
+6. 将 `offerer` 对应 token id 的 token 转移给买家，完成交易。
 
-还有一点需要注意的是 如果 offerer 的 offer 中 identifierOrCriteria 是 0 的话，表示买家可以购买 offerer 的任意 token id 的 token。
+还有一点需要注意的是 如果 `offerer` 的 `offer` 中 `identifierOrCriteria` 是 0 的话，表示买家可以购买 `offerer` 的任意 token id 的 token。
 
-#### 3. 受限订单和额外数据（restricted order and extra data）
+#### 3. 受限订单和额外数据（Restricted order and Extra data）
 
 所谓受限制（RESTRICTED）的订单就是在成单前检查订单的时候需要进行额外的校验，只有通过校验的订单才能进行成交。
 
@@ -534,13 +534,13 @@ struct CriteriaResolver {
 
 #### 4. 可以指定 recipient
 
-fulfillOrder 和 fulfillAvailableOrders 方法只能指定 `msg.sender` 作为 recipient。fulfillAdvancedOrder 和 fulfillAvailableAdvancedOrders 可以指定任意的 recipient。
+fulfillOrder 和 fulfillAvailableOrders 方法只能指定 `msg.sender` 作为 `recipient`。fulfillAdvancedOrder 和 fulfillAvailableAdvancedOrders 可以指定任意的 `recipient`。
 
 ### Conduit（管道）
 
 Conduit 是一个合约，发售者通过他来设置代币授权。Conduit 的所有者可以为 Conduit 添加和删除 "channel"，而注册的 channel 可以指示 Conduit 如何转移代币。Conduit 以完全 "选择 "的方式实现了可扩展性和可升级性，给创造者、收集者和平台提供了额外的能力，使他们能够利用 Seaport 做出自己的选择，同时保持与协议上其他挂单的广泛兼容性。
 
-order 中的 conduitKey 就与此相关。我们看看具体是怎么实现的。
+`order` 中的 `conduitKey` 就与此相关。我们看看具体是怎么实现的。
 
 #### ConduitController 和 Conduit
 
@@ -554,7 +554,7 @@ order 中的 conduitKey 就与此相关。我们看看具体是怎么实现的�
 
 ConduitController 用来管理所有 Conduit 的合约。可以创建和查询对应的 Conduit 具体信息。
 
-所有被管理的 Conduit 都放在 _conduits 这一个 map 类型的属性里。key 是 Conduit 的地址， value 是 ConduitProperties 类型。包含了 Conduit 的基本信息。
+所有被管理的 Conduit 都放在 `_conduits` 这一个 map 类型的属性里。key 是 Conduit 的地址， value 是 ConduitProperties 类型。包含了 Conduit 的基本信息。
 
 ##### ConduitProperties
 
@@ -574,7 +574,7 @@ struct ConduitProperties {
 
  `createConduit()` 是创建 Conduit 的方法。
 
-`conduitKey` 是 bytes32 类型的数据。前20个字节是该方法的调用者的地址。后面的字节补 0。也就是说 conduitKey 其实就是由创建 Conduit 的账户地址转换而来的。
+`conduitKey` 是 bytes32 类型的数据。前20个字节是该方法的调用者的地址。后面的字节补 0。也就是说 `conduitKey` 其实就是由创建 Conduit 的账户地址转换而来的。
 
 `initialOwner` 是要创建的 Conduit 的 Owner。不能为空。
 
@@ -649,7 +649,7 @@ function createConduit(bytes32 conduitKey, address initialOwner)
 
 #### updateChannel
 
-通过调用 updateChannel() 来管理 Conduit 的 channel。需要注意的是虽然 Conduit 合约有 `updateChannel()` 方法，但是 Conduit 的 channel 必须由 ConduitController 来管理，不能直接调用。
+通过调用 `updateChannel()` 来管理 Conduit 的 channel。需要注意的是虽然 Conduit 合约有 `updateChannel()` 方法，但是 Conduit 的 channel 必须由 ConduitController 来管理，不能直接调用。
 
 ```solidity
 // ConduitController.sol => updateChannel()
@@ -758,17 +758,17 @@ function updateChannel(
 
 对于 fulfillBasicOrder()：
 
-通过 offererConduitKey 指定 offerToken 转移用到的 Conduit Key。
-通过 fulfillerConduitKey 指定 considerationToken 转移用到的 Conduit Key。
+通过 `offererConduitKey` 指定 `offer` Token 转移用到的 Conduit Key。
+通过 `fulfillerConduitKey` 指定 `consideration` Token 转移用到的 Conduit Key。
 
 对于 fulfillOrder()、fulfillAdvancedOrder()、fulfillAvailableOrders()、fulfillAvailableAdvancedOrders()：
 
-通过 conduitKey 指定 offer 中的 token 转移用到的 Conduit Key。
-通过 fulfillerConduitKey 指定 consideration 中的 token 转移用到的 Conduit Key。
+通过 `conduitKey` 指定 `offer` 中的 token 转移用到的 Conduit Key。
+通过 fulfillerConduitKey 指定 `consideration` 中的 token 转移用到的 Conduit Key。
 
 对于 matchOrders()、matchAdvancedOrders()：
 
-通过 conduitKey 指定对应 order 中的 token 转移用到的 Conduit Key。
+通过 `conduitKey` 指定对应 order 中的 token 转移用到的 Conduit Key。
 
 ##### 2. 处理 order 中的 offer 和 consideration
 
@@ -851,7 +851,7 @@ function _applyFractionsAndTransferEach(
     }
 ```
 
-需要特别注意的是 accumulator 这个字节数组。它用来存储所有将要进行转移的 token 的相关信息。
+需要特别注意的是 `accumulator` 这个字节数组。它用来存储所有将要进行转移的 token 的相关信息。
 
 `_transferOfferItem()` 和 `_transferConsiderationItem()` 最后都被转化为 `_transferReceivedItem()` 方法。这个方法最终又指向 `_transfer()` 方法。而由于当前合约 OrderFulfiller 继承自 Executor，所以这两个函数最终都会调用 `Executor` 里的 `_transfer()` 方法。在 `_transfer()` 方法中如果 `conduitKey` 没有指定就直接进行转移。否则，就将转移需要的数据插入到 accumulator 中。
 
@@ -972,7 +972,7 @@ function _transferERC721(
 
 ##### 5. _insert()
 
-_insert() 方法负责组织调用 conduit 合约方法的 data 数据。
+`_insert()` 方法负责组织调用 conduit 合约方法的 data 数据。
 
 ```solidity
 function _insert(
@@ -1035,7 +1035,7 @@ function _insert(
 
 ##### 6. _trigger()
 
-_trigger() 方法触发 conduitKey 对应的 conduit 的调用，将所有积累的项目转移。转移完成后将 accumulator 状态重置。
+`_trigger()` 方法触发 `conduitKey` 对应的 conduit 的调用，将所有积累的项目转移。转移完成后将 accumulator 状态重置。
 
 ```solidity
 // Executor.sol => _trigger()
@@ -1121,9 +1121,9 @@ _trigger() 方法触发 conduitKey 对应的 conduit 的调用，将所有积累
 
 总结一下在转移 token 的逻辑。
 
-1. 对于没有指定 conduitKey 的 token， 直接进行转移。
-2. 对于指定 conduitKey 的 token，将使用同一个 conduitKey 的 token 相关数据组织成一个调用 Couduit 合约 execute() 方法的 data 数据。
-3. 使用 data 数据调用 Couduit 合约 execute() 方法，来完成 token 的转移。
+1. 对于没有指定 `conduitKey` 的 token， 直接进行转移。
+2. 对于指定 `conduitKey` 的 token，将使用同一个 `conduitKey` 的 token 相关数据组织成一个调用 Couduit 合约 `execute()` 方法的 data 数据。
+3. 使用 data 数据调用 Couduit 合约 `execute()` 方法，来完成 token 的转移。
 
 #### Conduit
 
@@ -1131,11 +1131,11 @@ _trigger() 方法触发 conduitKey 对应的 conduit 的调用，将所有积累
 
 Conduit 合约继承自 TokenTransferrer。也就是说 Conduit 合约负责的是 Token 的转移。里面有各种转移 token 的方法。
 
-其实在订单中如果不使用 Conduit 的话，最终调用的转移 token 的方法就是 TokenTransferrer 合约里的方法。使用 Conduit 的目的就是可以通过设置 channel 和 channel 的状态来控制 token 的转移。
+其实在订单中如果不使用 Conduit 的话，最终调用的转移 token 的方法就是 TokenTransferrer 合约里的方法。使用 Conduit 的目的就是可以通过设置 `channel` 和 `channel` 的状态来控制 token 的转移。
 
 ##### 1. onlyOpenChannel
 
-这一切个关键就在于 onlyOpenChannel 这个函数修饰器上。通过它来确保调用者是一个注册在 Conduit 上的 channel， 并且该 channel 是打开的。
+这一切个关键就在于 `onlyOpenChannel` 这个函数修饰器上。通过它来确保调用者是一个注册在 Conduit 上的 `channel`， 并且该 `channel` 是打开的。
 
 ```solidity
 // Conduit.sol => onlyOpenChannel
@@ -1171,7 +1171,7 @@ modifier onlyOpenChannel() {
 
 ##### 2. execute
 
-execute 方法是用来执行批量 token 转移的。它有 onlyOpenChannel 的函数修饰器。确保该方法的调用者是一个注册在 Conduit 上的 channel， 并且该 channel 是打开的。在成单方法中对于有 conduitKey 的 token 最终调用该方法进行转移。
+`execute()` 方法是用来执行批量 token 转移的。它有 `onlyOpenChannel` 的函数修饰器。确保该方法的调用者是一个注册在 Conduit 上的 channel， 并且该 channel 是打开的。在成单方法中对于有 `conduitKey` 的 token 最终调用该方法进行转移。
 
 ```solidity
 // Conduit.sol => execute()
@@ -1205,7 +1205,7 @@ execute 方法是用来执行批量 token 转移的。它有 onlyOpenChannel 的
 
 `_transfer()` 方法跟 Executor 合约中的方法类似。都是根据 token 的类型调用不同的方法。
 
-这些执行 token 转移的方法就是 TokenTransferrer 合约里实现的方法。跟上面没有指定 conduitKey 的时候的转移方法是一个方法。
+这些执行 token 转移的方法就是 TokenTransferrer 合约里实现的方法。跟上面没有指定 `conduitKey` 的时候的转移方法是一个方法。
 
 ```solidity
 // Conduit.sol => _transfer()
@@ -1249,7 +1249,7 @@ function _transfer(ConduitTransfer calldata item) internal {
 
 #### Conduit 总结
 
-总结起来 Conduit 就是提供了一个权限管理的功能，通过设置 conduitKey，来限制代币的转移。只允许注册在 ConduitController 管理的 Conduit 上的 channel 才有权限进行转移 token。这样无疑为创造者、收集者和平台提供了额外的能力。NFT 市场也许会出现一些新的玩法。
+总结起来 Conduit 就是提供了一个权限管理的功能，通过设置 `conduitKey`，来限制代币的转移。只允许注册在 ConduitController 管理的 Conduit 上的 channel 才有权限进行转移 token。这样无疑为创造者、收集者和平台提供了额外的能力。NFT 市场也许会出现一些新的玩法。
 
 ### fulfillBasicOrder
 
@@ -1291,13 +1291,13 @@ function fulfillBasicOrder(
 
 #### 通过 fulfillBasicOrder 执行的订单要满足的条件
 
-1. 该订单只包含一个 offer 项目，并且至少包含一个 consideration 项目。
+1. 该订单只包含一个 `offer` 项目，并且至少包含一个 `consideration` 项目。
 2. 该订单只包含一个 ERC721 或 ERC1155 项目，并且该项目不是基于标准的（Criteria-based）。
-3. 该订单的 offerer 会收到 consideration 中第一个项目。
+3. 该订单的 `offerer` 会收到 `consideration` 中第一个项目。
 4. 用作货币（currency）的 token 必须是同一种。也就是说要么是原生代币作为支付货币 要么是 ERC20 的 token 作为支付货币，不能混合支付。
 5. offer 不能是原生代币。
-6. 每个项目的 startAmount 必须与该项目的 endAmount 一致（即项目不能有升/降金额）。
-7. 所有 "被忽略 "的项目字段（即本地项目的token和identifierOrCriteria以及ERC20项目的identifierOrCriteria）被设置为空地址或零。
+6. 每个项目的 `startAmount` 必须与该项目的 `endAmount` 一致（即项目不能有升/降金额）。
+7. 所有 "被忽略 "的项目字段（即本地项目的 `token` 和 `identifierOrCriteria` 以及 ERC20 项目的 `identifierOrCriteria`）被设置为空地址或零。
 8. 原生货币项目上的token需要设置为空地址，货币上的标识符需要为 0，ERC721项目上的数量要为 1。
 9. 如果订单有多个对价项目，并且除第一个对价项目外的所有对价项目与被提供的项目类型相同，则被提供的项目金额不低于除第一个对价项目金额外的所有对价项目金额之和。
 
@@ -1329,13 +1329,11 @@ enum BasicOrderRouteType {
 
 这里有个 `BasicOrderRouteType` 的概念。也就是交换路径。表示支付什么类型的代币获取什么类型的代币。
 
-注意：上面说过 offer 不能是原生代币，因此没有 `ERC721_TO_ETH` 或者 `ERC1155_TO_ETH` 的类型。
+注意：上面说过 `offer` 不能是原生代币，因此没有 `ERC721_TO_ETH` 或者 `ERC1155_TO_ETH` 的类型。
 
 还有一点 BasicOrder 的订单的类型不是最上面我们讲到的 `OrderType`。 他有自己的 `BasicOrderType`。
 
 `basicOrderType = orderType + (4 * basicOrderRoute)`
-
-与 `OrderType` 类似。
 
 ```solidity
 // ConsiderationEnums.sol => BasicOrderType
@@ -1516,6 +1514,8 @@ returns(bool fulfilled)
 
 这两个方法用来批量成交订单，一次性购买多个订单。类似于 gem 这类聚合器起到的作用。
 
+具体方法参数的结构
+
 ```solidity
 
 function fulfillAvailableOrders(
@@ -1652,16 +1652,16 @@ returns(
 
 #### orders
 
-orders 是要进行成交的订单信息。跟上面的 fulfillOrder 方法中一样。
+`orders` 是要进行成交的订单信息。跟上面的 fulfillOrder 方法中一样。
 
 #### maximumFulfilled
 
-maximumFulfilled 表示最多要执行多少个订单。因为订单可能因为已取消，或者已经被购买等等原因失效了。这个时候这些失效的订单就会被跳过，执行剩下的订单，直到完成的订单达到 maximumFulfilled 这个数量。
+`maximumFulfilled` 表示最多要执行多少个订单。因为订单可能因为已取消，或者已经被购买等等原因失效了。这个时候这些失效的订单就会被跳过，执行剩下的订单，直到完成的订单达到 `maximumFulfilled` 这个数量。
 
 #### offerFulfillments 和 considerationFulfillments
 
-offerFulfillments 是所有尝试进行成交的所有 offer 详情。
-considerationFulfillments 是所有尝试进行成交的 consideration 详情。
+`offerFulfillments` 是所有尝试进行成交的所有 `offer` 详情。
+`considerationFulfillments` 是所有尝试进行成交的 `consideration` 详情。
 
 他们都是二维数组的结构。
 
@@ -1676,18 +1676,18 @@ considerationFulfillments 是所有尝试进行成交的 consideration 详情。
 
 外层的数组是将满足同意条件的 token 进行归类。
 
-对于所有的 offer 来说满足以下条件的会被归类到一个数组：
+对于所有的 `offer` 来说满足以下条件的会被归类到一个数组：
 
 1. 提供者相同
-2. token 的合约地址相同
-3. identifierOrCriteria 相同
+2. `token` 的合约地址相同
+3. `identifierOrCriteria` 相同
 4. 操作转移 token 的地址相同，也就是上面提到的 Conduit 的 channel 相同。
 
 对于所有的 offer 来说满足以下条件的会被归类到一个数组：
 
 1. 接收者相同
 2. token 的合约地址相同
-3. identifierOrCriteria 相同
+3. `identifierOrCriteria` 相同
 
 需要注意的是一个 ERC721 类型的 token 会单独归类到一个数组中去。也就是说就算多个 ERC721 的 token 上面的参数相同，也依然会被归类到不同的数组中去。
 
@@ -1697,7 +1697,7 @@ considerationFulfillments 是所有尝试进行成交的 consideration 详情。
 
 举个例子：
 
-现在有三个 ERC721 的订单。第一个订单和第二个订单 offer 中的 ERC721 token 的合约地址相同，但 token id 不同。第三个订单 offer 中的 ERC721 token 的合约地址跟前两个不相同。
+现在有三个 ERC721 的订单。第一个订单和第二个订单 `offer` 中的 ERC721 token 的合约地址相同，但 token id 不同。第三个订单 `offer` 中的 ERC721 token 的合约地址跟前两个不相同。
 
 ```solidity
 //=============firstOrder
@@ -1816,7 +1816,7 @@ considerationFulfillments 是所有尝试进行成交的 consideration 详情。
 }
 ```
 
-这种情况下传入的 offerComponents 和 considerationComponents 分别是
+这种情况下传入的 `offerComponents` 和 `considerationComponents` 分别是
 
 ```solidity
 //==========offerFulfillments
@@ -1884,7 +1884,7 @@ considerationFulfillments 是所有尝试进行成交的 consideration 详情。
 
 #### 返回值 executions
 
-executions 是最终执行的货币转移的具体信息。
+`executions` 是最终执行的货币转移的具体信息。
 
 比如上面的订单总共执行了 6 次 token 的转移。
 
@@ -1999,9 +1999,143 @@ executions 是最终执行的货币转移的具体信息。
 
 对一组订单（大于等于2个）进行匹配。以这种方式履行的订单没有一个明确的履行者。因此交易成功的事件中 recipient 为空。要想获取到这种成单方式的 recipient。需要根据多个订单综合考虑。
 
+具体方法参数的结构
+
+```solidity
+function matchOrders(
+    orders(
+        parameters(
+            address offerer, 
+            address zone, 
+            offer(
+                uint8 itemType, 
+                address token, 
+                uint256 identifierOrCriteria, 
+                uint256 startAmount, 
+                uint256 endAmount
+                )[] , 
+            consideration(
+                uint8 itemType, 
+                address token, 
+                uint256 identifierOrCriteria, 
+                uint256 startAmount, 
+                uint256 endAmount, 
+                address recipient
+                )[] , 
+            uint8 orderType, 
+            uint256 startTime, 
+            uint256 endTime, 
+            bytes32 zoneHash, 
+            uint256 salt, 
+            bytes32 conduitKey, 
+            uint256 totalOriginalConsiderationItems
+            ) , 
+        bytes signature
+        )[] , 
+    fulfillments(
+        offerComponents(
+            uint256 orderIndex, 
+            uint256 itemIndex
+            )[] , 
+        considerationComponents(
+            uint256 orderIndex, 
+            uint256 itemIndex
+            )[] 
+        )[] 
+    ) 
+    
+    payable 
+    
+    returns(
+        executions(
+            item(
+                uint8 itemType, 
+                address token, 
+                uint256 identifier, 
+                uint256 amount, 
+                address recipient
+                ) , 
+            address offerer, 
+            bytes32 conduitKey
+        )[] 
+        )
+
+```
+
+```solidity
+function matchAdvancedOrders(
+    advancedOrders(
+        parameters(
+            address offerer, 
+            address zone, 
+            offer(
+                uint8 itemType, 
+                address token, 
+                uint256 identifierOrCriteria, 
+                uint256 startAmount,
+                uint256 endAmount
+                )[] , 
+            consideration(
+                uint8 itemType, 
+                address token, 
+                uint256 identifierOrCriteria, 
+                uint256 startAmount, 
+                uint256 endAmount, 
+                address recipient
+                )[] , 
+            uint8 orderType, 
+            uint256 startTime, 
+            uint256 endTime, 
+            bytes32 zoneHash, 
+            uint256 salt, 
+            bytes32 conduitKey, 
+            uint256 totalOriginalConsiderationItems
+            ) , 
+        uint120 numerator, 
+        uint120 denominator, 
+        bytes signature, 
+        bytes extraData
+        )[] , 
+    criteriaResolvers(
+        uint256 orderIndex, 
+        uint8 side, 
+        uint256 index, 
+        uint256 identifier, 
+        bytes32[] criteriaProof
+        )[] , 
+    fulfillments(
+        tuple(
+            uint256 orderIndex, 
+            uint256 itemIndex
+            )[] offerComponents, 
+        tuple(
+            uint256 orderIndex, 
+            uint256 itemIndex
+            )[] considerationComponents
+        )[] 
+    ) 
+    
+    payable 
+    
+    returns 
+    (
+        executions(
+            item(
+                uint8 itemType, 
+                address token, 
+                uint256 identifier, 
+                uint256 amount, 
+                address recipient
+                ) , 
+            address offerer, 
+            bytes32 conduitKey
+            )[] 
+        )
+```
+
 #### fulfillments
 
-fulfillments 参数跟是对订单进行撮合后组织成的最终 token 的提供者和接收者信息的集合。
+`fulfillments` 参数跟是对订单进行撮合后组织成的最终 token 的提供者和接收者信息的集合。
 
 数据结构如下
 
@@ -2350,140 +2484,6 @@ fulfillments 是 具体 每个订单 offer 中的项目与另外一个订单中�
 ]
 ```
 
-具体方法的结构
-
-```solidity
-function matchOrders(
-    orders(
-        parameters(
-            address offerer, 
-            address zone, 
-            offer(
-                uint8 itemType, 
-                address token, 
-                uint256 identifierOrCriteria, 
-                uint256 startAmount, 
-                uint256 endAmount
-                )[] , 
-            consideration(
-                uint8 itemType, 
-                address token, 
-                uint256 identifierOrCriteria, 
-                uint256 startAmount, 
-                uint256 endAmount, 
-                address recipient
-                )[] , 
-            uint8 orderType, 
-            uint256 startTime, 
-            uint256 endTime, 
-            bytes32 zoneHash, 
-            uint256 salt, 
-            bytes32 conduitKey, 
-            uint256 totalOriginalConsiderationItems
-            ) , 
-        bytes signature
-        )[] , 
-    fulfillments(
-        offerComponents(
-            uint256 orderIndex, 
-            uint256 itemIndex
-            )[] , 
-        considerationComponents(
-            uint256 orderIndex, 
-            uint256 itemIndex
-            )[] 
-        )[] 
-    ) 
-    
-    payable 
-    
-    returns(
-        executions(
-            item(
-                uint8 itemType, 
-                address token, 
-                uint256 identifier, 
-                uint256 amount, 
-                address recipient
-                ) , 
-            address offerer, 
-            bytes32 conduitKey
-        )[] 
-        )
-
-```
-
-```solidity
-function matchAdvancedOrders(
-    advancedOrders(
-        parameters(
-            address offerer, 
-            address zone, 
-            offer(
-                uint8 itemType, 
-                address token, 
-                uint256 identifierOrCriteria, 
-                uint256 startAmount,
-                uint256 endAmount
-                )[] , 
-            consideration(
-                uint8 itemType, 
-                address token, 
-                uint256 identifierOrCriteria, 
-                uint256 startAmount, 
-                uint256 endAmount, 
-                address recipient
-                )[] , 
-            uint8 orderType, 
-            uint256 startTime, 
-            uint256 endTime, 
-            bytes32 zoneHash, 
-            uint256 salt, 
-            bytes32 conduitKey, 
-            uint256 totalOriginalConsiderationItems
-            ) , 
-        uint120 numerator, 
-        uint120 denominator, 
-        bytes signature, 
-        bytes extraData
-        )[] , 
-    criteriaResolvers(
-        uint256 orderIndex, 
-        uint8 side, 
-        uint256 index, 
-        uint256 identifier, 
-        bytes32[] criteriaProof
-        )[] , 
-    fulfillments(
-        tuple(
-            uint256 orderIndex, 
-            uint256 itemIndex
-            )[] offerComponents, 
-        tuple(
-            uint256 orderIndex, 
-            uint256 itemIndex
-            )[] considerationComponents
-        )[] 
-    ) 
-    
-    payable 
-    
-    returns 
-    (
-        executions(
-            item(
-                uint8 itemType, 
-                address token, 
-                uint256 identifier, 
-                uint256 amount, 
-                address recipient
-                ) , 
-            address offerer, 
-            bytes32 conduitKey
-            )[] 
-        )
-```
-
 ## 订单成交的流程
 
 ### Seaport 流程图
@@ -2494,14 +2494,14 @@ function matchAdvancedOrders(
 
 1. Hash order
 
-- 为 offer 项目和 consideration 项目导出哈希值
-- 检索 offerer 的当前计数器
+- 为 `offer` 项目和 `consideration` 项目导出哈希值
+- 检索 `offerer` 的当前计数器
 - 推导订单的哈希值
 
 2. 执行初始验证
 
 - 确保当前时间是在订单范围内
-- 确保订单类型的有效调用者；如果订单类型是限制性的，并且调用者不是 offer 或 Zone，则调用 Zone 的校验方法以确定订单是否有效。
+- 确保订单类型的有效调用者；如果订单类型是限制性的，并且调用者不是 `offer` 或 `Zone`，则调用 `Zone` 的校验方法以确定订单是否有效。
 
 3. 检索并更新订单状态
 
@@ -2525,15 +2525,15 @@ function matchAdvancedOrders(
 - 更新每个项目的类型和标识符
 - 确保所有剩余的项目都不是基于标准的
 
-6. 发出OrderFulfilled事件
+6. 触发 OrderFulfilled 事件
 
 - 包括更新的信息（比如每个项目的金额和经过解析后的项目的 token id）。
 
-7. 将 offer 项目从 offerer 转移到调用者
+7. 将 `offer` 项目从 `offerer` 转移到调用者
 
 - 根据订单类型，直接使用 conduit 或 Seaport 来进行转移。
 
-8. 将 consideration 项目从调用者转移到各自的接受者
+8. 将 `consideration` 项目从调用者转移到各自的接受者
 
 - 根据调用者的声明，使用 conduit 或 Seaport 来进行转移。
 
@@ -2543,12 +2543,12 @@ function matchAdvancedOrders(
 
 7. 执行交易
 
-- 确保每个 fulfillment 指的是一个或多个 offer 项目和一个或多个 consideration 项目，他们都具有相同的类型和 id ，并且每个 offer 项目具有相同的批准来源，每个 consideration 项目具有相同的接收者
-- 将每个 offer 项目和每个 consideration 项目的数量减少到零，并跟踪每个项目减少的总金额
+- 确保每个 `fulfillment` 指的是一个或多个 `offer` 项目和一个或多个 `consideration` 项目，他们都具有相同的类型和 id ，并且每个 `offer` 项目具有相同的批准来源，每个 `consideration` 项目具有相同的接收者
+- 将每个 `offer` 项目和每个 `consideration` 项目的数量减少到零，并跟踪每个项目减少的总金额
 - 比较每个项目的总金额，并将剩余的金额加到订单相应一侧的第一个项目上。
-- 为每项 fulfillment 返回一个单一的执行结果
+- 为每项 `fulfillment` 返回一个单一的执行结果
 
-8. 扫描每个 consideration 项目，确保没有一个项目的剩余金额为零
+8. 扫描每个 `consideration` 项目，确保没有一个项目的剩余金额为零
 9. 进行转账
 
 - 根据最初的订单类型，直接使用 conduit 或 Seaport 进行转移。
@@ -2560,11 +2560,11 @@ function matchAdvancedOrders(
 
 ### 1. zone 和 受限制订单（Restricted order）
 
-`RESTRICTED` 类型的订单必须由 zone 或 offerer 执行，或者调用 zone 的 `isValidOrder`或 `isValidOrderIncludingExtraData` 方法来查看返回的 magic value。这个 magic value 表示订单是否已被批准。
+`RESTRICTED` 类型的订单必须由 `zone` 或 `offerer` 执行，或者调用 `zone` 的 `isValidOrder()`或 `isValidOrderIncludingExtraData()` 方法来查看返回的 magic value。这个 magic value 表示订单是否已被批准。
 
 ### 2. 部分填充（Partial fills）
 
-Advanced 类型的成交方式中可以通过 numerator（分子）和 denominator（分母）两个参数来决定 PARTIAL 类型的订单最终成交的个数。这样就实现了部分填充订单。
+Advanced 类型的成交方式中可以通过 `numerator`（分子）和 `denominator`（分母）两个参数来决定 PARTIAL 类型的订单最终成交的个数。这样就实现了部分填充订单。
 
 ### 3. 基于标准的订单（Criteria-based orders）
 
@@ -2572,7 +2572,7 @@ Advanced 类型的成交方式中可以通过 numerator（分子）和 denominat
 
 ### 4. 管道（Conduit）和通道（Channel）
 
-Conduit 就提供了一个权限管理的功能，通过设置 conduitKey，来限制代币的转移。只允许注册在 ConduitController 管理的 Conduit 上的 channel 才有权限进行转移 token。
+Conduit 就提供了一个权限管理的功能，通过设置 `conduitKey`，来限制代币的转移。只允许注册在 ConduitController 管理的 Conduit 上的 channel 才有权限进行转移 token。
 
 ## 参考
 
