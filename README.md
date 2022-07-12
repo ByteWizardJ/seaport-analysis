@@ -72,7 +72,7 @@
   - [总结](#总结)
     - [1. zone 和 受限制订单（Restricted order）](#1-zone-和-受限制订单restricted-order)
     - [2. 部分填充（Partial fills）](#2-部分填充partial-fills)
-    - [3.基于标准的订单（Criteria-based orders）](#3基于标准的订单criteria-based-orders)
+    - [3. 基于标准的订单（Criteria-based orders）](#3-基于标准的订单criteria-based-orders)
     - [4. 管道（Conduit）和通道（Channel）](#4-管道conduit和通道channel)
   - [参考](#参考)
 
@@ -2566,7 +2566,7 @@ function matchAdvancedOrders(
 
 Advanced 类型的成交方式中可以通过 numerator（分子）和 denominator（分母）两个参数来决定 PARTIAL 类型的订单最终成交的个数。这样就实现了部分填充订单。
 
-### 3.基于标准的订单（Criteria-based orders）
+### 3. 基于标准的订单（Criteria-based orders）
 
 卖家在挂出订单的时候可以选择挂出基于标准的订单。也就是说用户可以将一系列的 token id 的集合设置为标准。当买家购买的具体某个 NFT 的 token id 包含在标准之中，就可以批准成单。
 
