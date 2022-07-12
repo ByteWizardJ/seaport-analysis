@@ -2414,6 +2414,10 @@ function matchAdvancedOrders(
 
 ## 订单成交的流程
 
+### Seaport 流程图
+
+![Seaport](Seaport.drawio.svg)
+
 ### 当通过 fulfillOrder 或 fulfillAdvancedOrder 完成一个订单时
 
 1. Hash order
@@ -2477,10 +2481,6 @@ function matchAdvancedOrders(
 
 - 根据最初的订单类型，直接使用 conduit 或 Seaport 进行转移。
 - 忽略to == from 或 amount == 0 的 fulfillment
-
-### Seaport 流程图
-
-![Seaport](Seaport.drawio.svg)
 
 ## 参考
 
