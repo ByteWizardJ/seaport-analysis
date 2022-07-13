@@ -78,7 +78,7 @@
 
 ## 概述
 
-Seaport 的交易模型跟之前的 Wyvern Protocol 一样,依旧是中央订单簿的交易模型。都是由链下的中心化的订单簿和链上的交易组成。
+Seaport 的交易模型跟之前的 Wyvern Protocol 一样，依旧是中央订单簿的交易模型。都是由链下的中心化的订单簿和链上的交易组成。
 
 ![order-book](order.png)
 
