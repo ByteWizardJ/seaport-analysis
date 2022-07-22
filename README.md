@@ -347,7 +347,7 @@ zone 是可选的辅助帐户，一般情况下是一个合约。
 
 `offerer` 可以通过调用 `incrementCounter()` 立即取消与当前计数器签署的所有订单。
 
-## Order Fulfillment
+## Order Fulfillment Method
 
 在 Wyvern Protocol 中所有的订单都是通过 `orderMatch()` 方法来最终成交的。Seaport 与之不同，提供了 7 个方法来执行交易。
 
